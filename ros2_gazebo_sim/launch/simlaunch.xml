@@ -1,0 +1,19 @@
+<launch>
+    <!-- Arguments -->
+    <arg name="car_name" default="car_1"/>
+    <arg name="x_pos" default="0.0"/>
+    <arg name="y_pos" default="0.0"/>
+    <arg name="z_pos" default="0.05"/>
+    <arg name="paint" default="Blue"/>
+    <arg name="track" default="$(find-pkg-share ros2_gazebo_sim)/world/race_track.world"/>
+
+    <!-- Launch Gazebo -->
+    <set_env name="GZ_SIM_RESOURCE_PATH" value="$(find-pkg-share ros2_gazebo_sim)/world"/>
+    <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
+        <arg name="gz_args" value="$(var track)"/>
+    </include>
+    
+    <!-- Spawn car and control topics -->
+    
+
+</launch>
