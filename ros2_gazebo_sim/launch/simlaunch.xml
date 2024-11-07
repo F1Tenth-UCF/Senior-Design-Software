@@ -12,8 +12,23 @@
     <include file="$(find-pkg-share ros_gz_sim)/launch/gz_sim.launch.py">
         <arg name="gz_args" value="$(var track)"/>
     </include>
+
+    <!-- Publish the robot state -->
+    <node pkg="robot_state_publisher" exec="robot_state_publisher">
+        <param name="robot_description" value="$(eval import os; import xacro; from ament_index_python.packages import get_package_share_directory; xacro.process_file(os.path.join(get_package_share_directory('ros2_gazebo_sim'), 'urdf', 'model.urdf')).toxml())" />
+    </node>
     
     <!-- Spawn car and control topics -->
-    
+    <include file="$(find-pkg-share ros_gz_sim)/launch/ros_gz_spawn_model.launch.py">
+        <arg name="world" value="default"/>
+        <arg name="file" value="$(find-pkg-share ros2_gazebo_sim)/urdf/model.urdf"/>
+        <arg name="entity_name" value="$(var car_name)"/>
+        <arg name="x" value="$(var x_pos)"/>
+        <arg name="y" value="$(var y_pos)"/>
+        <arg name="z" value="$(var z_pos)"/>
+        <arg name="bridge_name" value="ros_gz_bridge"/>
+        <arg name="config_file" value="$(find-pkg-share ros2_gazebo_sim)/config/topic_config.yaml"/>
+        <arg name="paint" value="$(var paint)"/>
+    </include>
 
 </launch>

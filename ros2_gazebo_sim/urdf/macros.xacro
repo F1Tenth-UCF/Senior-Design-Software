@@ -54,7 +54,7 @@
   <xacro:macro name="chassis_geometry">
     <origin xyz="0.46 -0.135 -0.180" rpy="1.57 0 3.14" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/chassis.stl" scale="0.000990 0.0009375 0.0009375"/>
+      <mesh filename="model://urdf/meshes/chassis.stl" scale="0.000990 0.0009375 0.0009375"/>
     </geometry>
   </xacro:macro>
 
@@ -62,42 +62,42 @@
   <xacro:macro name="left_rear_wheel_geometry">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/left_wheel.stl" />
+      <mesh filename="model://urdf/meshes/left_wheel.stl" />
     </geometry>
   </xacro:macro>
 
   <xacro:macro name="right_rear_wheel_geometry">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/right_wheel.stl" />
+      <mesh filename="model://urdf/meshes/right_wheel.stl" />
     </geometry>
   </xacro:macro>
 
   <xacro:macro name="left_front_wheel_geometry">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/left_wheel.stl" />
+      <mesh filename="model://urdf/meshes/left_wheel.stl" />
     </geometry>
   </xacro:macro>
 
   <xacro:macro name="right_front_wheel_geometry">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/right_wheel.stl" />
+      <mesh filename="model://urdf/meshes/right_wheel.stl" />
     </geometry>
   </xacro:macro>
 
   <xacro:macro name="left_steering_hinge_geometry">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/hinge.stl" />
+      <mesh filename="model://urdf/meshes/hinge.stl" />
     </geometry>
   </xacro:macro>
 
   <xacro:macro name="right_steering_hinge_geometry">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <geometry>
-      <mesh filename="package://ros2_gazebo_sim/urdf/meshes/hinge.stl" />
+      <mesh filename="model://urdf/meshes/hinge.stl" />
     </geometry>
   </xacro:macro>
 
@@ -118,40 +118,38 @@
   <!-- transmission macros -->
 
   <xacro:macro name="wheel_transmission" params="name">
-    <transmission name="${name}_transmission" type="SimpleTransmission">
+    <ros2_control name="${name}_transmission" type="actuator">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <joint name="${name}_joint">
+      </joint>
+    </ros2_control>
+
+    <!-- <transmission name="${name}_transmission" type="SimpleTransmission">
       <type>transmission_interface/SimpleTransmission</type>
-      <ros2_control name="GazeboSimSystem" type="system">
-        <hardware>
-          <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-        </hardware>
-        <joint name="${name}_joint">
-          <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        </joint>
-        <actuator name="${name}_motor">
-          <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-          <mechanicalReduction>1</mechanicalReduction>
-        </actuator>
-      </ros2_control>
-    </transmission>
+      <joint name="${name}_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${name}_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission> -->
   </xacro:macro>
 
-  <xacro:macro name="steering_hinge_transmission" params="name">
+  <!-- <xacro:macro name="steering_hinge_transmission" params="name">
     <transmission name="${name}_transmission" type="SimpleTransmission">
       <type>transmission_interface/SimpleTransmission</type>
-      <ros2_control name="GazeboSimSystem" type="system">
-        <hardware>
-          <plugin>gz_ros2_control/GazeboSimSystem</plugin>
-        </hardware>
-        <joint name="${name}_joint">
-          <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        </joint>
-        <actuator name="${name}_motor">
-          <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-          <mechanicalReduction>1</mechanicalReduction>
-        </actuator>
-      </ros2_control>
+      <joint name="${name}_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${name}_motor">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
     </transmission>
-  </xacro:macro>
+  </xacro:macro> -->
 
   <!-- Add chassis and it's inertia link -->
 
@@ -255,7 +253,7 @@
     <limit lower="-1.0" upper="1.0" effort="10" velocity="100" />
   </joint>
 
-  <xacro:steering_hinge_transmission name="$(arg robot_name)_left_steering_hinge" />
+  <!-- <xacro:steering_hinge_transmission name="$(arg robot_name)_left_steering_hinge" /> -->
 
   <!-- Add the right steering hinge with its joints and tranmissions -->
 
@@ -277,7 +275,7 @@
     <limit lower="-1.0" upper="1.0" effort="10" velocity="100" />
   </joint>
 
-  <xacro:steering_hinge_transmission name="$(arg robot_name)_right_steering_hinge" />
+  <!-- <xacro:steering_hinge_transmission name="$(arg robot_name)_right_steering_hinge" /> -->
 
   <!-- Add the left front wheel with its joints and tranmissions -->
 
@@ -344,7 +342,7 @@
     <visual>
       <origin xyz="0 0 -0.018" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package://ros2_gazebo_sim/urdf/meshes/hokuyo.stl"/>
+        <mesh filename="model://urdf/meshes/hokuyo.stl"/>
         <material name="grey" />
       </geometry>
     </visual>
@@ -468,12 +466,15 @@
 
   <gazebo>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find gz_ros2_control_demos)/config/control.yaml</parameters>
+      <parameters>$(find ros2_gazebo_sim)/config/control.yaml</parameters>
     </plugin>
+    <ros>
+        <namespace>/$(arg robot_name)</namespace>
+      </ros>
   </gazebo>
 
   <!-- Odometry (cheap hack) -->
-  <gazebo>
+  <!-- <gazebo>
     <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
       <alwaysOn>true</alwaysOn>
       <updateRate>50.0</updateRate>
@@ -484,10 +485,10 @@
       <xyzOffsets>0 0 0</xyzOffsets>
       <rpyOffsets>0 0 0</rpyOffsets>
     </plugin>
-  </gazebo>
+  </gazebo> -->
 
   <!-- hokuyo -->
-  <xacro:unless value="$(optenv DISABLE_GAZEBO_LASER false)">
+  <!-- <xacro:unless value="$(optenv DISABLE_GAZEBO_LASER false)">
     <gazebo reference="$(arg robot_name)_laser">
       <material>Gazebo/Grey</material>
       <sensor type="ray" name="$(arg robot_name)_hokuyo_sensor">
@@ -519,16 +520,14 @@
         </plugin>
       </sensor>
     </gazebo>
-  </xacro:unless>
+  </xacro:unless> -->
 
   <!-- camera object -->
-  <xacro:unless value="$(optenv DISABLE_GAZEBO_CAMERA false)">
+  <!-- <xacro:unless value="$(optenv DISABLE_GAZEBO_CAMERA false)">
     <gazebo reference="$(arg robot_name)_camera_link">
       <sensor type="camera" name="$(arg robot_name)_left_sensor">
         <update_rate>30.0</update_rate>
-        <!-- math.atan(320 / 687.8065795898438) * 2 -->
         <camera name="front_camera">
-          <!-- horizontal_fov>0.8709216071359963</horizontal_fov -->
           <horizontal_fov>1.74</horizontal_fov>
           <image>
             <width>1920</width>
@@ -552,7 +551,7 @@
           <imageTopicName>image</imageTopicName>
           <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
           <frameName>$(arg robot_name)_camera_link</frameName>
-          <hackBaseline>0</hackBaseline><!-- set this to 0.12 for the second camera -->
+          <hackBaseline>0</hackBaseline>
           <distortionK1>0.0</distortionK1>
           <distortionK2>0.0</distortionK2>
           <distortionK3>0.0</distortionK3>
@@ -561,7 +560,7 @@
         </plugin>
       </sensor>
     </gazebo>
-  </xacro:unless>
+  </xacro:unless> -->
 
   <material name="black">
     <color rgba="0.0 0.0 0.0 1.0"/>
