@@ -464,29 +464,17 @@
       </ros>
   </gazebo>
 
-  <!-- Odometry (cheap hack) -->
-  <!-- <gazebo>
-    <plugin name="p3d_base_controller" filename="libgazebo_ros_p3d.so">
-      <alwaysOn>true</alwaysOn>
-      <updateRate>50.0</updateRate>
-      <bodyName>$(arg robot_name)_base_link</bodyName>
-      <topicName>/$(arg robot_name)/ground_truth</topicName>
-      <gaussianNoise>0.01</gaussianNoise>
-      <frameName>world</frameName>
-      <xyzOffsets>0 0 0</xyzOffsets>
-      <rpyOffsets>0 0 0</rpyOffsets>
-    </plugin>
-  </gazebo> -->
-
   <!-- hokuyo -->
-  <!-- <xacro:unless value="$(optenv DISABLE_GAZEBO_LASER false)">
+  <xacro:unless value="$(optenv DISABLE_GAZEBO_LASER false)">
     <gazebo reference="$(arg robot_name)_laser">
       <material>Gazebo/Grey</material>
-      <sensor type="ray" name="$(arg robot_name)_hokuyo_sensor">
+      <sensor type="gpu_lidar" name="$(arg robot_name)_hokuyo_sensor">
+        <gz_frame_id>$(arg robot_name)_laser</gz_frame_id>
+        <topic>/$(arg robot_name)/scan</topic>
         <pose>0 0 0 0 0 0</pose>
         <visualize>false</visualize>
         <update_rate>40</update_rate>
-        <ray>
+        <lidar>
           <scan>
             <horizontal>
               <samples>1081</samples>
@@ -504,21 +492,22 @@
             <mean>0.0</mean>
             <stddev>0.01</stddev>
           </noise>
-        </ray>
-        <plugin name="hokuyo_controller" filename="libgazebo_ros_laser.so">
-          <topicName>/$(arg robot_name)/scan</topicName>
-          <frameName>$(arg robot_name)_laser</frameName>
-        </plugin>
+        </lidar>
       </sensor>
     </gazebo>
-  </xacro:unless> -->
+  </xacro:unless>
 
   <!-- camera object -->
-  <!-- <xacro:unless value="$(optenv DISABLE_GAZEBO_CAMERA false)">
+  <xacro:unless value="$(optenv DISABLE_GAZEBO_CAMERA false)">
     <gazebo reference="$(arg robot_name)_camera_link">
       <sensor type="camera" name="$(arg robot_name)_left_sensor">
+        <topic>/$(arg robot_name)/camera/image_raw</topic>
         <update_rate>30.0</update_rate>
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+        <gz_frame_id>$(arg robot_name)_camera_link</gz_frame_id>
         <camera name="front_camera">
+          <camera_info_topic>/$(arg robot_name)/camera_info</camera_info_topic>
           <horizontal_fov>1.74</horizontal_fov>
           <image>
             <width>1920</width>
@@ -535,23 +524,9 @@
             <stddev>0.007</stddev>
           </noise>
         </camera>
-        <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
-          <alwaysOn>true</alwaysOn>
-          <updateRate>30.0</updateRate>
-          <cameraName>/$(arg robot_name)/camera</cameraName>
-          <imageTopicName>image</imageTopicName>
-          <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
-          <frameName>$(arg robot_name)_camera_link</frameName>
-          <hackBaseline>0</hackBaseline>
-          <distortionK1>0.0</distortionK1>
-          <distortionK2>0.0</distortionK2>
-          <distortionK3>0.0</distortionK3>
-          <distortionT1>0.0</distortionT1>
-          <distortionT2>0.0</distortionT2>
-        </plugin>
       </sensor>
     </gazebo>
-  </xacro:unless> -->
+  </xacro:unless>
 
   <material name="black">
     <color rgba="0.0 0.0 0.0 1.0"/>

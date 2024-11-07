@@ -93,8 +93,12 @@ def generate_launch_description():
         package='ros_gz_sim',
         executable='create',
         output='screen',
-        arguments=['-topic', 'robot_description', '-name',
-                   LaunchConfiguration('car_name'), '-allow_renaming', 'true'],
+        arguments=['-topic', 'robot_description', 
+                   '-name', LaunchConfiguration('car_name'), 
+                   '-allow_renaming', 'true'
+                   '-x', LaunchConfiguration('x_pos'),
+                   '-y', LaunchConfiguration('y_pos'),
+                   '-z', LaunchConfiguration('z_pos'),],
     )
 
     joint_state_broadcaster_spawner = Node(
@@ -111,10 +115,16 @@ def generate_launch_description():
                    ],
     )
 
+    bridge_params = format_share_path('config/topic_config.yaml')
+
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
-        arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+        arguments=[
+            '--ros-args',
+            '-p',
+            f'config_file:={bridge_params}',
+        ],
         output='screen'
     )
 
