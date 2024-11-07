@@ -5,12 +5,14 @@ from ament_index_python import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
+from launch.actions import RegisterEventHandler
+from launch.event_handlers import OnProcessExit
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
-from launch.substitutions import TextSubstitution
+from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution, TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.actions import PushROSNamespace
+from launch_ros.substitutions import FindPackageShare
 from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 from launch_yaml.launch_description_sources import YAMLLaunchDescriptionSource
 import xacro
@@ -55,33 +57,66 @@ def generate_launch_description():
         ]
     )
 
-    # publish robot state
-    doc = xacro.parse(open(format_share_path('urdf/macros.xacro')))
-    xacro.process_doc(doc)
-    params = {'robot_description': doc.toxml()}
+    # get robot description and controller description
+    robot_description_content = Command(
+        [
+            PathJoinSubstitution([FindExecutable(name='xacro')]),
+            ' ',
+            PathJoinSubstitution(
+                [FindPackageShare('ros2_gazebo_sim'),
+                 'urdf', 'macros.xacro']
+            ),
+        ]
+    )
+    robot_controllers = PathJoinSubstitution(
+        [
+            FindPackageShare('ros2_gazebo_sim'),
+            'config',
+            'control.yaml',
+        ]
+    )
 
+    # publish robot state
     node_robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
         output='screen',
-        parameters=[params]
+        parameters=[
+            {
+                "robot_description": robot_description_content
+            }
+        ]
     )
 
     # spawn car
-    # car_include = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(format_share_path('launch/ros_gz_spawn_model.launch.py', package="ros_gz_sim")),
-    #     launch_arguments=[
-    #         ("world", "default"),
-    #         ("file", format_share_path('urdf/model.urdf')),
-    #         ("entity_name", LaunchConfiguration('car_name')),
-    #         ("x", LaunchConfiguration('x_pos')),
-    #         ("y", LaunchConfiguration('y_pos')),
-    #         ("z", LaunchConfiguration('z_pos')),
-    #         ("bridge_name", "ros_gz_bridge"),
-    #         ("config_file", format_share_path('config/topic_config.yaml')),
-    #         ("paint", LaunchConfiguration('paint'))
-    #     ]
-    # )
+    gz_spawn_entity = Node(
+        package='ros_gz_sim',
+        executable='create',
+        output='screen',
+        arguments=['-topic', 'robot_description', '-name',
+                   LaunchConfiguration('car_name'), '-allow_renaming', 'true'],
+    )
+
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_state_broadcaster'],
+    )
+    ackermann_steering_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['ackermann_controller',
+                   '--param-file',
+                   robot_controllers,
+                   ],
+    )
+
+    bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+        output='screen'
+    )
 
     return LaunchDescription([
         arg_car_name,
@@ -90,7 +125,20 @@ def generate_launch_description():
         arg_z_pos,
         arg_paint,
         arg_track,
+        bridge,
         gazebo_include,
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=gz_spawn_entity,
+                on_exit=[joint_state_broadcaster_spawner],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=joint_state_broadcaster_spawner,
+                on_exit=[ackermann_steering_controller_spawner],
+            )
+        ),
         node_robot_state_publisher,
-        # car_include
+        gz_spawn_entity,
     ])

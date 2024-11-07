@@ -123,33 +123,24 @@
         <plugin>gz_ros2_control/GazeboSimSystem</plugin>
       </hardware>
       <joint name="${name}_joint">
+        <command_interface name="velocity" />
+        <state_interface name="velocity" />
+        <state_interface name="position" />
       </joint>
     </ros2_control>
-
-    <!-- <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission> -->
   </xacro:macro>
 
-  <!-- <xacro:macro name="steering_hinge_transmission" params="name">
-    <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
+  <xacro:macro name="steering_hinge_transmission" params="name">
+    <ros2_control name="${name}_transmission" type="actuator">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
       <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+        <command_interface name="position" />
+        <state_interface name="position" />
       </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission>
-  </xacro:macro> -->
+    </ros2_control>
+  </xacro:macro>
 
   <!-- Add chassis and it's inertia link -->
 
@@ -253,7 +244,7 @@
     <limit lower="-1.0" upper="1.0" effort="10" velocity="100" />
   </joint>
 
-  <!-- <xacro:steering_hinge_transmission name="$(arg robot_name)_left_steering_hinge" /> -->
+  <xacro:steering_hinge_transmission name="$(arg robot_name)_left_steering_hinge" />
 
   <!-- Add the right steering hinge with its joints and tranmissions -->
 
@@ -275,7 +266,7 @@
     <limit lower="-1.0" upper="1.0" effort="10" velocity="100" />
   </joint>
 
-  <!-- <xacro:steering_hinge_transmission name="$(arg robot_name)_right_steering_hinge" /> -->
+  <xacro:steering_hinge_transmission name="$(arg robot_name)_right_steering_hinge" />
 
   <!-- Add the left front wheel with its joints and tranmissions -->
 

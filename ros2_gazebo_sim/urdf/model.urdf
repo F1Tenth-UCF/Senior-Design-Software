@@ -7,18 +7,6 @@
   <!-- inertial parameter macros -->
   <!-- geometry macros -->
   <!-- transmission macros -->
-  <!-- <xacro:macro name="steering_hinge_transmission" params="name">
-    <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission>
-  </xacro:macro> -->
   <!-- Add chassis and it's inertia link -->
   <link name="car_1_base_link"/>
   <link name="car_1_chassis">
@@ -86,18 +74,11 @@
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
     <joint name="car_1_left_rear_wheel_joint">
-      </joint>
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
   </ros2_control>
-  <!-- <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission> -->
   <!-- Add the right rear wheel with its joints and tranmissions -->
   <link name="car_1_right_rear_wheel">
     <inertial>
@@ -131,18 +112,11 @@
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
     <joint name="car_1_right_rear_wheel_joint">
-      </joint>
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
   </ros2_control>
-  <!-- <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission> -->
   <!-- Add the left steering hinge with its joints and tranmissions -->
   <link name="car_1_left_steering_hinge">
     <inertial>
@@ -165,7 +139,15 @@
     <axis xyz="-1 0 0"/>
     <limit effort="10" lower="-1.0" upper="1.0" velocity="100"/>
   </joint>
-  <!-- <xacro:steering_hinge_transmission name="$(arg robot_name)_left_steering_hinge" /> -->
+  <ros2_control name="car_1_left_steering_hinge_transmission" type="actuator">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="car_1_left_steering_hinge_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+  </ros2_control>
   <!-- Add the right steering hinge with its joints and tranmissions -->
   <link name="car_1_right_steering_hinge">
     <inertial>
@@ -188,7 +170,15 @@
     <axis xyz="-1 0 0"/>
     <limit effort="10" lower="-1.0" upper="1.0" velocity="100"/>
   </joint>
-  <!-- <xacro:steering_hinge_transmission name="$(arg robot_name)_right_steering_hinge" /> -->
+  <ros2_control name="car_1_right_steering_hinge_transmission" type="actuator">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="car_1_right_steering_hinge_joint">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+    </joint>
+  </ros2_control>
   <!-- Add the left front wheel with its joints and tranmissions -->
   <link name="car_1_left_front_wheel">
     <inertial>
@@ -222,18 +212,11 @@
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
     <joint name="car_1_left_front_wheel_joint">
-      </joint>
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
   </ros2_control>
-  <!-- <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission> -->
   <!-- Add the left front wheel with its joints and tranmissions -->
   <link name="car_1_right_front_wheel">
     <inertial>
@@ -267,18 +250,11 @@
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
     <joint name="car_1_right_front_wheel_joint">
-      </joint>
+      <command_interface name="velocity"/>
+      <state_interface name="velocity"/>
+      <state_interface name="position"/>
+    </joint>
   </ros2_control>
-  <!-- <transmission name="${name}_transmission" type="SimpleTransmission">
-      <type>transmission_interface/SimpleTransmission</type>
-      <joint name="${name}_joint">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-      </joint>
-      <actuator name="${name}_motor">
-        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
-        <mechanicalReduction>1</mechanicalReduction>
-      </actuator>
-    </transmission> -->
   <!-- Add Hokuyo laser scanner -->
   <link name="car_1_laser">
     <inertial>
