@@ -26,7 +26,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'),
         glob('launch/*launch.py')),
-        *get_dir_preserving_structure('worlds'),
+        *get_dir_preserving_structure('world'),
         *get_dir_preserving_structure('urdf'),
         *get_dir_preserving_structure('config'),
     ],

@@ -148,7 +148,7 @@
       <pose frame=''>-0.719505 0.551979 0 0 0 0</pose>
     </model>
     <model name='race_track'>
-      <pose frame=''>-28.0315 -24.6199 0 0 -0 0</pose>
+      <pose frame=''>0.0315 0.6199 0 0 -0 0</pose>
       <static>1</static>
       <link name='body'>
         <collision name='collision'>
