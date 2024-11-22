@@ -8,6 +8,14 @@
 
   <!-- inertial parameter macros -->
 
+  <xacro:macro name="box_inertia" params="m w h d">
+    <inertial>
+      <origin xyz="0 0 0" rpy="${pi/2} 0 ${pi/2}"/>
+      <mass value="${m}"/>
+      <inertia ixx="${(m/12) * (h*h + d*d)}" ixy="0.0" ixz="0.0" iyy="${(m/12) * (w*w + d*d)}" iyz="0.0" izz="${(m/12) * (w*w + h*h)}"/>
+    </inertial>
+  </xacro:macro>
+
   <xacro:macro name="chassis_inertial_params">
     <origin xyz="0.1477 0 0" rpy="0 0 0" />
     <mass value="4.0" />
@@ -172,6 +180,29 @@
     <origin xyz="0 0 0" rpy="0 0 0" />
     <parent link="$(arg robot_name)_chassis" />
     <child link="$(arg robot_name)_chassis_inertia" />
+  </joint>
+
+  <!-- Add the imu sensor -->
+  <link name="$(arg robot_name)_imu_link">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </visual>
+
+    <collision>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+
+    <xacro:box_inertia m="0.1" w="0.1" d="0.1" h="0.1"/>
+  </link>
+
+  <joint name="$(arg robot_name)_imu_joint" type="fixed">
+    <parent link="$(arg robot_name)_chassis"/>
+    <child link="$(arg robot_name)_imu_link"/>
+    <origin xyz="0 0 0.01"/>
   </joint>
 
   <!-- Add the left rear wheel with its joints and tranmissions -->
@@ -457,11 +488,74 @@
 
   <gazebo>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find ros2_gazebo_sim)/config/control.yaml</parameters>
+      <parameters>$(find ros2_gazebo_sim)/config/control_odom.yaml</parameters>
     </plugin>
     <ros>
         <namespace>/$(arg robot_name)</namespace>
       </ros>
+  </gazebo>
+
+  <!-- IMU -->
+  <gazebo reference="$(arg robot_name)_imu_link">
+    <sensor name="$(arg robot_name)_imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>1</update_rate>
+      <topic>/$(arg robot_name)/imu</topic>
+      <imu>
+        <angular_velocity>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+              <bias_mean>0.0000075</bias_mean>
+              <bias_stddev>0.0000008</bias_stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+              <bias_mean>0.0000075</bias_mean>
+              <bias_stddev>0.0000008</bias_stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>2e-4</stddev>
+              <bias_mean>0.0000075</bias_mean>
+              <bias_stddev>0.0000008</bias_stddev>
+            </noise>
+          </z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+              <bias_mean>0.1</bias_mean>
+              <bias_stddev>0.001</bias_stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+              <bias_mean>0.1</bias_mean>
+              <bias_stddev>0.001</bias_stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <mean>0.0</mean>
+              <stddev>1.7e-2</stddev>
+              <bias_mean>0.1</bias_mean>
+              <bias_stddev>0.001</bias_stddev>
+            </noise>
+          </z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
   </gazebo>
 
   <!-- hokuyo -->
@@ -493,37 +587,6 @@
             <stddev>0.01</stddev>
           </noise>
         </lidar>
-      </sensor>
-    </gazebo>
-  </xacro:unless>
-
-  <!-- camera object -->
-  <xacro:unless value="$(optenv DISABLE_GAZEBO_CAMERA false)">
-    <gazebo reference="$(arg robot_name)_camera_link">
-      <sensor type="camera" name="$(arg robot_name)_left_sensor">
-        <topic>/$(arg robot_name)/camera/image_raw</topic>
-        <update_rate>30.0</update_rate>
-        <always_on>true</always_on>
-        <visualize>true</visualize>
-        <gz_frame_id>$(arg robot_name)_camera_link</gz_frame_id>
-        <camera name="front_camera">
-          <camera_info_topic>/$(arg robot_name)/camera_info</camera_info_topic>
-          <horizontal_fov>1.74</horizontal_fov>
-          <image>
-            <width>1920</width>
-            <height>1080</height>
-            <format>B8G8R8</format>
-          </image>
-          <clip>
-            <near>0.02</near>
-            <far>300</far>
-          </clip>
-          <noise>
-            <type>gaussian</type>
-            <mean>0.0</mean>
-            <stddev>0.007</stddev>
-          </noise>
-        </camera>
       </sensor>
     </gazebo>
   </xacro:unless>
