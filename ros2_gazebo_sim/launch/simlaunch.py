@@ -64,7 +64,7 @@ def generate_launch_description():
             ' ',
             PathJoinSubstitution(
                 [FindPackageShare('ros2_gazebo_sim'),
-                 'urdf', 'macros.xacro']
+                 'urdf', 'macros_odom.xacro']
             ),
         ]
     )
@@ -72,7 +72,7 @@ def generate_launch_description():
         [
             FindPackageShare('ros2_gazebo_sim'),
             'config',
-            'control.yaml',
+            'control_odom.yaml',
         ]
     )
 
