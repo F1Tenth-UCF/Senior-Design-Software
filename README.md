@@ -38,6 +38,20 @@ ros2 launch ros2_gazebo_sim simlaunch.py
 
 and then navigate to the web interface at [`localhost:8080`](http://localhost:8080/vnc.html) and quickly unpause the simulator (bottom left button). If you do not do this within 5 seconds, the controllers will time out waiting for the simulation to start, and you'll have to run the launch file again.
 
+Then, run
+```bash
+ros2 launch slam_toolbox online_async_launch.py slam_params_file:=src/ros2_gazebo_sim/config/slam_params.yaml
+```
+
+In another terminal to start the SLAM algorithm.
+
+Finally, run
+```
+ros2 launch nav2_bringup navigation_launch.py params_file:=src/ros2_gazebo_sim/config/nav2_params.yaml
+```
+
+to start the navigation stack.
+
 At this point, the car is ready to control! Publish `geometry_msgs/msg/TwistStamped` messages to control speed and steering.
 
 ## Controlling the car
