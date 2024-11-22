@@ -8,7 +8,8 @@
   <!-- geometry macros -->
   <!-- transmission macros -->
   <!-- Add chassis and it's inertia link -->
-  <link name="car_1_base_link"/>
+  <!-- <link name="$(arg robot_name)_base_link"/> -->
+  <link name="base_link"/>
   <link name="car_1_chassis">
     <visual>
       <origin rpy="1.57 0 3.14" xyz="0.46 -0.135 -0.180"/>
@@ -26,7 +27,7 @@
   </link>
   <joint name="car_1_base_link_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0.05"/>
-    <parent link="car_1_base_link"/>
+    <parent link="base_link"/>
     <child link="car_1_chassis"/>
   </joint>
   <link name="car_1_chassis_inertia">

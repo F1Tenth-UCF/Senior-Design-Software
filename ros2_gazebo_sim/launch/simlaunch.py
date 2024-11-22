@@ -115,8 +115,17 @@ def generate_launch_description():
                    ],
     )
 
-    bridge_params = format_share_path('config/topic_config.yaml')
+    # fuse the IMU and Odom data, and publish the odom -> base_link transform
+    robot_localization_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[format_share_path('config/ekf.yaml'), {'use_sim_time': True}]
+    )
 
+    # bridge gazebo topics to ROS
+    bridge_params = format_share_path('config/topic_config.yaml')
     bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -151,4 +160,5 @@ def generate_launch_description():
         ),
         node_robot_state_publisher,
         gz_spawn_entity,
+        robot_localization_node,
     ])

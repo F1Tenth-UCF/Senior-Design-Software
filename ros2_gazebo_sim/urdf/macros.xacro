@@ -152,7 +152,8 @@
 
   <!-- Add chassis and it's inertia link -->
 
-  <link name="$(arg robot_name)_base_link"/>
+  <!-- <link name="$(arg robot_name)_base_link"/> -->
+  <link name="base_link"/>
 
   <link name="$(arg robot_name)_chassis">
     <visual>
@@ -166,7 +167,7 @@
 
   <joint name="$(arg robot_name)_base_link_joint" type="fixed">
     <origin xyz="0 0 0.05" rpy="0 0 0" />
-    <parent link="$(arg robot_name)_base_link" />
+    <parent link="base_link" />
     <child link="$(arg robot_name)_chassis" />
   </joint>
 
