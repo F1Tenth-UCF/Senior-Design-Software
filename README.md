@@ -18,7 +18,7 @@ docker exec -it $container_id /bin/bash
 ```
 to enter the container.
 
-> Note: Ensure to source ROS 2 in every new terminal window. Run `source /opt/ros/jazzy/setup.bash` to do so.
+> Note: Ensure to source ROS 2 in every new terminal window. Run `source /opt/ros/jazzy/setup.bash` to do so. You will also have to run `source /sim_ws/install/setup.bash` to source the workspace.
 
 The simulator can be controlled using the web interface. The web interface can be accessed at [`localhost:8080`](http://localhost:8080/vnc.html). The web interface allows the user to control the car and visualize the sensor data.
 

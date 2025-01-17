@@ -489,7 +489,7 @@
 
   <gazebo>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find ros2_gazebo_sim)/config/control_odom.yaml</parameters>
+      <parameters>$(find ros2_gazebo_sim)/config/control.yaml</parameters>
     </plugin>
     <ros>
         <namespace>/$(arg robot_name)</namespace>

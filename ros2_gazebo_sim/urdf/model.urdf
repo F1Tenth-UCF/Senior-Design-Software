@@ -404,7 +404,7 @@
   <!-- Gazebo plugins -->
   <gazebo>
     <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>/sim_ws/install/ros2_gazebo_sim/share/ros2_gazebo_sim/config/control_odom.yaml</parameters>
+      <parameters>/sim_ws/install/ros2_gazebo_sim/share/ros2_gazebo_sim/config/control.yaml</parameters>
     </plugin>
     <ros>
       <namespace>/car_1</namespace>
