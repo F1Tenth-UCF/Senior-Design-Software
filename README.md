@@ -7,34 +7,44 @@ This repository contains the Gazebo simulator for the F1Tenth platform. The simu
 ## Setting up the docker application
 run
 ```bash
-docker-compose up
+docker-compose up --build
 ```
 to build the docker image and run the container. The container will start the simulator and the web interface.
 
-Then, run
-```bash
-docker ps
-docker exec -it $container_id /bin/bash
-```
-to enter the container.
+The remaining commands need to be run in new terminals. For each of these, run the following commands to enter the running container and source the ROS 2 environment (docker ps will show the container id):
 
-> Note: Ensure to source ROS 2 in every new terminal window. Run `source /opt/ros/jazzy/setup.bash` to do so. You will also have to run `source /sim_ws/install/setup.bash` to source the workspace.
+```bash
+docker ps 
+docker exec -it $container_id /bin/bash
+source /opt/ros/jazzy/setup.bash
+cd sim_ws
+colcon build
+source install/setup.bash
+```
 
 The simulator can be controlled using the web interface. The web interface can be accessed at [`localhost:8080`](http://localhost:8080/vnc.html). The web interface allows the user to control the car and visualize the sensor data.
 
-## Building the simulator
-
-Navigate to `sim_ws/` and run
-```bash
-colcon build
-```
-
 ## Running the simulator
 
-In a terminal, run
+In a new terminal, run
 ```bash
 ros2 launch ros2_gazebo_sim simlaunch.py
 ```
+
+> Note: To verify that the simulator is working properly, create a new terminal and run the following command after running the setup commands above:
+> ```bash
+> ros2 topic pub /ackermann_controller/reference geometry_msgs/msg/TwistStamped "{
+>   header: {
+>     stamp: { sec: 0, nanosec: 0 },
+>     frame_id: 'base_link'
+>   },
+>   twist: {
+>     linear: { x: 1.0, y: 0.0, z: 0.0 },
+>     angular: { x: 0.0, y: 0.0, z: 0.0 }
+>   }
+> }"
+> ```
+> This will publish a velocity of 1 m/s to the car. If the car does not move, there may be an issue with the simulation or the controllers.
 
 and then navigate to the web interface at [`localhost:8080`](http://localhost:8080/vnc.html) and quickly unpause the simulator (bottom left button). If you do not do this within 5 seconds, the controllers will time out waiting for the simulation to start, and you'll have to run the launch file again.
 
@@ -53,6 +63,8 @@ ros2 launch nav2_bringup navigation_launch.py params_file:=src/ros2_gazebo_sim/c
 to start the navigation stack.
 
 At this point, the car is ready to control! Publish `geometry_msgs/msg/TwistStamped` messages to control speed and steering.
+
+> It may be helpful to use rviz to visualize the map and the car's path. You can start it by running `rviz2` in a new terminal.
 
 ## Controlling the car
 TODO
