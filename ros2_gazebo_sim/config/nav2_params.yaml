@@ -161,6 +161,7 @@ controller_server:
 
 collision_monitor:
   ros__parameters:
+    use_sim_time: True
     base_frame_id: "base_link"
     odom_frame_id: "odom"
     cmd_vel_in_topic: "cmd_vel_nav"

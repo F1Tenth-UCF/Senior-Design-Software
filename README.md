@@ -11,16 +11,13 @@ docker-compose up --build
 ```
 to build the docker image and run the container. The container will start the simulator and the web interface.
 
-The remaining commands need to be run in new terminals. For each of these, run the following commands to enter the running container and source the ROS 2 environment (docker ps will show the container id):
+The remaining commands need to each be run in their own terminal. To set up the new terminal window, run the following command:
 
 ```bash
-docker ps 
-docker exec -it $container_id /bin/bash
-source /opt/ros/jazzy/setup.bash
-cd sim_ws
-colcon build
-source install/setup.bash
+./setup_terminal_window.sh
 ```
+
+This will open a new terminal window and source the ROS 2 environment.
 
 The simulator can be controlled using the web interface. The web interface can be accessed at [`localhost:8080`](http://localhost:8080/vnc.html). The web interface allows the user to control the car and visualize the sensor data.
 
