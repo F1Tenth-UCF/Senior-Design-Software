@@ -1,67 +1,55 @@
 # Senior Design F1Tenth Gazebo Simulator
 
-This repository contains the Gazebo simulator for the F1Tenth platform. The simulator is based on the [F1Tenth Gazebo Simulator](https://github.com/haritsahm/simulator/tree/code_refactor) but adapted to ROS2 and Cartographer.
+This branch contains the code for the physical F1Tenth race vehicle.
 
 # Setup
 
-## Setting up the docker application
-run
+> Note: Follow these instructions prior to cloning this repository.
+
+## Setting up the ROS 2 environment
+Following the F1Tenth standard, we use ROS 2 Foxy Fitzroy. Begin by following the installation instructions for linux [here](https://docs.ros.org/en/foxy/Installation.html). Be sure to install the `ros-foxy-desktop` package, as you will need `rviz2` to aid in visualizing the car's sensor readings as you continue to set up the vehicle.
+
+Now, you need to create a new ROS 2 workspace. Follow the tutorial [here](https://docs.ros.org/en/foxy/Tutorials/Beginner-Client-Libraries/Creating-A-Workspace/Creating-A-Workspace.html) to create a new workspace. In the rest of this guide, we will assume that your workspace is located at `~/f1tenth_ws`.
+
+## Setting up the lidar
+
+> Note: We use a Hokuyo UST-10LX lidar connected to the ethernet port of a Seed Studio reComputer J20 running [Jetson Linux 35.6.0](https://developer.nvidia.com/embedded/jetson-linux-r3560). Instructions for flashing the Jetson with that version of Jetpack can be found [here](https://wiki.seeedstudio.com/reComputer_J2021_J202_Flash_Jetpack/#enterforce-recovery-mode).
+
+Source your ROS 2 environment, and then run the following commands to install dependencies for the lidar:
+
 ```bash
-docker-compose up --build
+sudo apt-get update
+sudo apt-get install ros-foxy-laser-proc
+sudo apt-get install ros-foxy-diagnostic-updater
 ```
-to build the docker image and run the container. The container will start the simulator and the web interface.
 
-The remaining commands need to each be run in their own terminal. To set up the new terminal window, run the following command:
+Then, follow the instructions [here](https://github.com/Hokuyo-aut/urg_node2) to install the lidar driver. Be sure to install the `urg_node2` package in the `src` directory of your workspace.
+
+After this is installed, you will need to enter Ubuntu settings > Network and click the + icon nect to wired. In the IPV4 tab, set the method to `manual` and add the following to the Addresses table:
+
+- Address: 192.168.0.15
+- Netmask: 255.255.255.0
+- Gateway: 192.168.0.1
+
+**The Jetson must be connected to this network in order to read data from the lidar.**
+
+TODO: add instructions for changing the transform of the lidar depending on its mounting position.
+
+## Setting up the PixHawk
+
+> Note: In this section, we are using a PixHawk 6C flight controller running PX4, connected to a VESC 6MK VI electronic speed controller. 
+
+TODO: add configuration instructions for the PixHawk and VESC.
+
+> Note: The remainder of these instructions assume that the PixHawk and VESC are configured such that the car can be driven and steered from a ground control station connected to the PixHawk such as [QGroundControl](https://docs.qgroundcontrol.com/master/en/).
+
+# Running the car
+
+Run each of the following commands **in their own sourced terminal window**.
+
+## Launching the lidar
 
 ```bash
-./setup_terminal_window.sh
+ros2 launch urg_node2 urg_node2.launch.py
 ```
 
-This will open a new terminal window and source the ROS 2 environment.
-
-The simulator can be controlled using the web interface. The web interface can be accessed at [`localhost:8080`](http://localhost:8080/vnc.html). The web interface allows the user to control the car and visualize the sensor data.
-
-## Running the simulator
-
-In a new terminal, run
-```bash
-ros2 launch ros2_gazebo_sim simlaunch.py
-```
-
-> Note: To verify that the simulator is working properly, create a new terminal and run the following command after running the setup commands above:
-> ```bash
-> ros2 topic pub /ackermann_controller/reference geometry_msgs/msg/TwistStamped "{
->   header: {
->     stamp: { sec: 0, nanosec: 0 },
->     frame_id: 'base_link'
->   },
->   twist: {
->     linear: { x: 1.0, y: 0.0, z: 0.0 },
->     angular: { x: 0.0, y: 0.0, z: 0.0 }
->   }
-> }"
-> ```
-> This will publish a velocity of 1 m/s to the car. If the car does not move, there may be an issue with the simulation or the controllers.
-
-and then navigate to the web interface at [`localhost:8080`](http://localhost:8080/vnc.html) and quickly unpause the simulator (bottom left button). If you do not do this within 5 seconds, the controllers will time out waiting for the simulation to start, and you'll have to run the launch file again.
-
-Then, run
-```bash
-ros2 launch slam_toolbox online_async_launch.py slam_params_file:=src/ros2_gazebo_sim/config/slam_params.yaml
-```
-
-In another terminal to start the SLAM algorithm.
-
-Finally, run
-```
-ros2 launch nav2_bringup navigation_launch.py params_file:=src/ros2_gazebo_sim/config/nav2_params.yaml
-```
-
-to start the navigation stack.
-
-At this point, the car is ready to control! Publish `geometry_msgs/msg/TwistStamped` messages to control speed and steering.
-
-> It may be helpful to use rviz to visualize the map and the car's path. You can start it by running `rviz2` in a new terminal.
-
-## Controlling the car
-TODO
