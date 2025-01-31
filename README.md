@@ -45,6 +45,14 @@ TODO: add configuration instructions for the PixHawk and VESC.
 
 Install mavros by following the instructions [here](https://github.com/mavlink/mavros/blob/master/mavros/README.md).
 
+## Setting up SLAM
+
+Install slam-toolbox. In our case, the command was
+
+```bash
+sudo apt-get install ros-foxy-slam-toolbox
+```
+
 # Running the car
 
 Run each of the following commands **in their own sourced terminal window**.
