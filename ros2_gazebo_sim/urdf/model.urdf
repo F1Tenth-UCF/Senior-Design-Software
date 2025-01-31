@@ -231,7 +231,7 @@
     <axis xyz="0 0 -1"/>
     <limit effort="10" velocity="100"/>
   </joint>
-  <ros2_control name="car_1_left_front_wheel_transmission" type="actuator">
+  <!-- <ros2_control name="car_1_left_front_wheel_transmission" type="actuator">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
@@ -240,7 +240,7 @@
       <state_interface name="velocity"/>
       <state_interface name="position"/>
     </joint>
-  </ros2_control>
+  </ros2_control> -->
   <!-- Add the left front wheel with its joints and tranmissions -->
   <link name="car_1_right_front_wheel">
     <inertial>
@@ -269,7 +269,7 @@
     <axis xyz="0 0 -1"/>
     <limit effort="10" velocity="100"/>
   </joint>
-  <ros2_control name="car_1_right_front_wheel_transmission" type="actuator">
+  <!-- <ros2_control name="car_1_right_front_wheel_transmission" type="actuator">
     <hardware>
       <plugin>gz_ros2_control/GazeboSimSystem</plugin>
     </hardware>
@@ -278,7 +278,7 @@
       <state_interface name="velocity"/>
       <state_interface name="position"/>
     </joint>
-  </ros2_control>
+  </ros2_control> -->
   <!-- Add Hokuyo laser scanner -->
   <link name="car_1_laser">
     <inertial>

@@ -2,6 +2,10 @@
 
 This repository contains the Gazebo simulator for the F1Tenth platform. The simulator is based on the [F1Tenth Gazebo Simulator](https://github.com/haritsahm/simulator/tree/code_refactor) but adapted to ROS2 and Cartographer.
 
+# Info about the simulator
+
+This simulator is built using Gazebo, and was set up following the nav2 tutorial [here](https://docs.nav2.org/setup_guides/index.html). However, instead of using the Gazebo differential drive plugin, we use the ros2_controllers ackermann plugin. This is what publishes the odometry data from the wheel encoders; however, we use the gz sim [imu](https://gazebosim.org/docs/latest/sensors/).
+
 # Setup
 
 ## Setting up the docker application
