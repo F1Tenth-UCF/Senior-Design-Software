@@ -1,4 +1,0 @@
-slam_toolbox:
-  ros__parameters:
-    scan_topic: /car_1/scan
-    base_frame: base_link

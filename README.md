@@ -43,6 +43,8 @@ TODO: add configuration instructions for the PixHawk and VESC.
 
 > Note: The remainder of these instructions assume that the PixHawk and VESC are configured such that the car can be driven and steered from a ground control station connected to the PixHawk such as [QGroundControl](https://docs.qgroundcontrol.com/master/en/).
 
+Install mavros by following the instructions [here](https://github.com/mavlink/mavros/blob/master/mavros/README.md).
+
 # Running the car
 
 Run each of the following commands **in their own sourced terminal window**.
@@ -52,4 +54,21 @@ Run each of the following commands **in their own sourced terminal window**.
 ```bash
 ros2 launch urg_node2 urg_node2.launch.py
 ```
+
+## Launching the MAVROS bridge
+
+```bash
+sudo chmod 777 /dev/ttyTHS0
+ros2 run mavros mavros_node --ros-args --param fcu_url:=/dev/ttyTHS0:921600 > mavros_out.txt 2>&1 &
+ros2 service call /mavros/set_stream_rate mavros_msgs/srv/StreamRate "{stream_id: 0, message_rate: 20, on_off: 1}"
+ros2 param set /mavros/imu frame_id imu
+```
+
+## Launching the car
+
+```bash
+ros2 launch f1tenth_racer simlaunch.py
+```
+
+At this point, the TF tree should contain the odom->base_link transform, as well as the base_link->imu and base_link->laser transforms.
 

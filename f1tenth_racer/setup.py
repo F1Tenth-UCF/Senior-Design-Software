@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 from glob import glob
 import os
 
-package_name = 'ros2_gazebo_sim'
+package_name = 'f1tenth_racer'
 
 def get_all_files(dir):
     return [f for f in glob(f'{dir}/*') if os.path.isfile(f)]
