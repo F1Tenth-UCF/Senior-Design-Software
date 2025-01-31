@@ -80,3 +80,9 @@ ros2 launch f1tenth_racer simlaunch.py
 
 At this point, the TF tree should contain the odom->base_link transform, as well as the base_link->imu and base_link->laser transforms.
 
+## Running SLAM
+
+```bash
+ros2 launch slam_toolbox online_async_launch.py 'slam_params_file:=src/Senior-Design-Software/config/slam_params'
+```
+
