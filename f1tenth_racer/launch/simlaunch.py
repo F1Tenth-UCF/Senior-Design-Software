@@ -32,7 +32,8 @@ def generate_launch_description():
         output='screen',
         parameters=[
             {
-                "robot_description": robot_description_content
+                "robot_description": robot_description_content,
+                # "use_tf_static": False
             }
         ]
     )

@@ -83,6 +83,11 @@ At this point, the TF tree should contain the odom->base_link transform, as well
 ## Running SLAM
 
 ```bash
-ros2 launch slam_toolbox online_async_launch.py 'slam_params_file:=src/Senior-Design-Software/config/slam_params'
+ros2 launch slam_toolbox online_async_launch.py use_sim_time:=false
 ```
 
+## Running NAV2
+
+```bash
+ros2 launch nav2_bringup navigation_launch.py params_file:=src/Senior-Design-Software/f1tenth_racer/config/nav2_params.yaml
+```

@@ -2,3 +2,4 @@ slam_toolbox:
   ros__parameters:
     scan_topic: /scan
     base_frame: base_link
+    use_sim_time: false
