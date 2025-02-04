@@ -39,6 +39,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'topic_checker_node = f1tenth_racer.topic_checker_node:main'
         ],
     },
 )

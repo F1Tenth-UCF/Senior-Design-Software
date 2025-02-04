@@ -55,39 +55,11 @@ sudo apt-get install ros-foxy-slam-toolbox
 
 # Running the car
 
-Run each of the following commands **in their own sourced terminal window**.
-
-## Launching the lidar
-
-```bash
-ros2 launch urg_node2 urg_node2.launch.py
-```
-
-## Launching the MAVROS bridge
+Run the following commands to start the full stack (lidar + FCU + transforms + SLAM + NAV2):
 
 ```bash
 sudo chmod 777 /dev/ttyTHS0
-ros2 run mavros mavros_node --ros-args --param fcu_url:=/dev/ttyTHS0:921600 > mavros_out.txt 2>&1 &
-ros2 service call /mavros/set_stream_rate mavros_msgs/srv/StreamRate "{stream_id: 0, message_rate: 20, on_off: 1}"
-ros2 param set /mavros/imu frame_id imu
+ros2 launch f1tenth_racer stacklaunch.py
 ```
 
-## Launching the car
-
-```bash
-ros2 launch f1tenth_racer simlaunch.py
-```
-
-At this point, the TF tree should contain the odom->base_link transform, as well as the base_link->imu and base_link->laser transforms.
-
-## Running SLAM
-
-```bash
-ros2 launch slam_toolbox online_async_launch.py use_sim_time:=false
-```
-
-## Running NAV2
-
-```bash
-ros2 launch nav2_bringup navigation_launch.py params_file:=src/Senior-Design-Software/f1tenth_racer/config/nav2_params.yaml
-```
+> Note: One of the commands in this launch file uses sudo to open the FCU serial port. You may need to enter the car's password to continue. However, it is likely that the prompt to do so will be buried under the other output. If it seems to hang, try entering the password and pressing enter again.
