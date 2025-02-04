@@ -25,11 +25,39 @@ sudo apt-get install ros-foxy-diagnostic-updater
 
 Then, follow the instructions [here](https://github.com/Hokuyo-aut/urg_node2) to install the lidar driver. Be sure to install the `urg_node2` package in the `src` directory of your workspace.
 
-After this is installed, you will need to enter Ubuntu settings > Network and click the + icon nect to wired. In the IPV4 tab, set the method to `manual` and add the following to the Addresses table:
+After this is installed, run the following command to enter the network configuration menu:
 
-- Address: 192.168.0.15
-- Netmask: 255.255.255.0
-- Gateway: 192.168.0.1
+```bash
+nm-connection-editor
+```
+
+Create a new ethernet connection named 'ROS' with the following settings:
+
+- General settings:
+    - All users may connect to this network: **checked**
+- Ethernet settings:
+    - MTU: **automatic**
+    - Wake on LAN: **Default**
+    - Link negotiation: **Ignore**
+- 802.1X Security settings:
+    - Use 802.1X security: **unchecked**
+- DCB Settings:
+    - Enable DCB: **unchecked**
+- Proxy Settings:
+    - Method: **None**
+- IPv4 Settings:
+    - Method: **Manual**
+    - Address: **192.168.0.15**
+    - Netmask: **32**
+    - Gateway: **Blank**
+    - Routes:
+        - Address: **192.168.0.10**
+        - Netmask: **255.255.255.255**
+        - Gateway: **Blank**
+        - Metric: **Blank**
+        - Use this connection only for resources on its network: **checked**
+- IPv6 Settings:
+    - Method: **Automatic**
 
 **The Jetson must be connected to this network in order to read data from the lidar.**
 
