@@ -63,7 +63,7 @@ Create a new ethernet connection named 'ROS' with the following settings:
 
 TODO: add instructions for changing the transform of the lidar depending on its mounting position.
 
-## Setting up the PixHawk
+<!-- ## Setting up the PixHawk
 
 > Note: In this section, we are using a PixHawk 6C flight controller running PX4, connected to a VESC 6MK VI electronic speed controller. 
 
@@ -71,7 +71,11 @@ TODO: add configuration instructions for the PixHawk and VESC.
 
 > Note: The remainder of these instructions assume that the PixHawk and VESC are configured such that the car can be driven and steered from a ground control station connected to the PixHawk such as [QGroundControl](https://docs.qgroundcontrol.com/master/en/).
 
-Install mavros by following the instructions [here](https://github.com/mavlink/mavros/blob/master/mavros/README.md).
+Install mavros by following the instructions [here](https://github.com/mavlink/mavros/blob/master/mavros/README.md). -->
+
+## Setting up the F1Tenth System
+
+Install the F1Tenth system by following the instructions [here](https://f1tenth.readthedocs.io/en/foxy_test/getting_started/firmware/drive_workspace.html#doc-drive-workspace). If you experience issues with the command `rosdep install --from-paths src -i -y`, try simply installing the dependencies with `sudo apt-get install ros-foxy-[package_name]` for each dependency for which the rosdep definition is not found.
 
 ## Setting up SLAM
 
@@ -83,11 +87,10 @@ sudo apt-get install ros-foxy-slam-toolbox
 
 # Running the car
 
-Run the following commands to start the full stack (lidar + FCU + transforms + SLAM + NAV2):
+Run the following commands to start the full stack (lidar + F1Tenth system + SLAM + NAV2):
 
 ```bash
-sudo chmod 777 /dev/ttyTHS0
-ros2 launch f1tenth_racer stacklaunch.py
+ros2 launch f1tenth_racer f1tenth_sys_stacklaunch.py
 ```
 
-> Note: One of the commands in this launch file uses sudo to open the FCU serial port. You may need to enter the car's password to continue. However, it is likely that the prompt to do so will be buried under the other output. If it seems to hang, try entering the password and pressing enter again.
+<!-- > Note: One of the commands in this launch file uses sudo to open the FCU serial port. You may need to enter the car's password to continue. However, it is likely that the prompt to do so will be buried under the other output. If it seems to hang, try entering the password and pressing enter again. -->

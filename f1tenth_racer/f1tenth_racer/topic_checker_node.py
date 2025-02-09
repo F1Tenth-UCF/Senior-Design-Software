@@ -43,9 +43,7 @@ class TopicChecker(Node):
         if not self.received_message:
             self.received_message = True
             self.get_logger().info(f'Topic {self.subscription.topic_name} is publishing')
-            # Instead of calling shutdown directly, destroy the node and its entities first
             self.destroy_node()
-            # Set a flag that main can check
             self._shutdown_flag = True
     
     def log_waiting(self):
