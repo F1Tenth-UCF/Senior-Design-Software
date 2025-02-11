@@ -40,7 +40,7 @@ setup(
     entry_points={
         'console_scripts': [
             'topic_checker_node = f1tenth_racer.topic_checker_node:main',
-            'fcu_intermediary = f1tenth_racer.fcu_intermediary:main'
+            'nav2_intermediary = f1tenth_racer.nav2_intermediary:main'
         ],
     },
 )

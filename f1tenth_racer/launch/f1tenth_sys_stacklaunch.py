@@ -150,6 +150,7 @@ def generate_launch_description():
     # nav2
     nav2_node = ExecuteProcess(
         cmd=['ros2', 'launch', 'nav2_bringup', 'navigation_launch.py', 'params_file:=' + format_share_path('config/nav2_params.yaml')],
+        output='screen'
     )
 
     # Helper function to create a topic checker node
