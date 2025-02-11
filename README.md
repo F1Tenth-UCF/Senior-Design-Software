@@ -77,6 +77,8 @@ Install mavros by following the instructions [here](https://github.com/mavlink/m
 
 Install the F1Tenth system by following the instructions [here](https://f1tenth.readthedocs.io/en/foxy_test/getting_started/firmware/drive_workspace.html#doc-drive-workspace). If you experience issues with the command `rosdep install --from-paths src -i -y`, try simply installing the dependencies with `sudo apt-get install ros-foxy-[package_name]` for each dependency for which the rosdep definition is not found.
 
+> Be sure to follow the `Calibrating the Odometry` tutorial before running.
+
 ## Setting up SLAM
 
 Install slam-toolbox. In our case, the command was
