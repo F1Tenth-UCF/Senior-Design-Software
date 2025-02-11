@@ -152,6 +152,12 @@ def generate_launch_description():
         cmd=['ros2', 'launch', 'nav2_bringup', 'navigation_launch.py', 'params_file:=' + format_share_path('config/nav2_params.yaml')],
         output='screen'
     )
+    nav2_intermediary_node = Node(
+        package='f1tenth_racer',
+        executable='nav2_intermediary',
+        name='nav2_intermediary',
+        output='screen'
+    )
 
     # Helper function to create a topic checker node
     def create_topic_checker(topic_name, topic_type):
@@ -194,7 +200,7 @@ def generate_launch_description():
     ld.add_action(RegisterEventHandler(
             OnProcessExit(
                 target_action=odom_checker, # wait for fcu port to be open
-                on_exit=[nav2_node] # start mavros and start listening for odom
+                on_exit=[nav2_node, nav2_intermediary_node] # start mavros and start listening for odom
             )
         ))
 

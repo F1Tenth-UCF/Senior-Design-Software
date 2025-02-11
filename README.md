@@ -95,4 +95,6 @@ Run the following commands to start the full stack (lidar + F1Tenth system + SLA
 ros2 launch f1tenth_racer f1tenth_sys_stacklaunch.py
 ```
 
+> Note: If difficulties are encountered, try running `ros2 daemon stop` followed by `ros2 daemon start` to restart the ROS 2 daemon, while the script is not running.
+
 <!-- > Note: One of the commands in this launch file uses sudo to open the FCU serial port. You may need to enter the car's password to continue. However, it is likely that the prompt to do so will be buried under the other output. If it seems to hang, try entering the password and pressing enter again. -->

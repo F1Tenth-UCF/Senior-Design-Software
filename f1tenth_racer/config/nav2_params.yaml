@@ -181,7 +181,7 @@ controller_server:
     progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["goal_checker"]
     controller_plugins: ["FollowPath"]
-    enable_stamped_cmd_vel: true
+    # enable_stamped_cmd_vel: true
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
@@ -194,7 +194,7 @@ controller_server:
       stateful: True
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.5
+      desired_linear_vel: 5.0
       lookahead_dist: 0.6
       min_lookahead_dist: 0.3
       max_lookahead_dist: 0.9
@@ -223,14 +223,14 @@ collision_monitor:
     use_sim_time: False
     base_frame_id: "base_link"
     odom_frame_id: "odom"
-    cmd_vel_in_topic: "cmd_vel_nav"
+    cmd_vel_in_topic: "cmd_vel"
     cmd_vel_out_topic: "f1tenth_racer/cmd_vel"
     state_topic: "collision_monitor_state"
     transform_tolerance: 0.5
     source_timeout: 5.0
     base_shift_correction: true
     stop_pub_timeout: 2.0
-    enable_stamped_cmd_vel: true
+    # enable_stamped_cmd_vel: true
     use_realtime_priority: false
     polygons: ["PolygonStop", "PolygonSlow", "FootprintApproach"]
     PolygonStop:
