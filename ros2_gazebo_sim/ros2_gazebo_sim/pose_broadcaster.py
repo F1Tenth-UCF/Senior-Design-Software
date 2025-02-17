@@ -113,9 +113,7 @@ class Nav2Intermediary(Node):
 
         # pubsub setup for pose broadcasting
         self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-        self.pose_publisher = self.create_publisher(PoseStamped, '/explore_pose', 20)
-
-        
+        self.pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 20)
 
     def map_callback(self, msg: OccupancyGrid):
         """Callback for the map topic. Determines the next goal pose for exploring the map"""
