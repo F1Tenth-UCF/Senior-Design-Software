@@ -1,0 +1,42 @@
+FROM ros:jazzy
+
+# Install wget for downloading Miniconda
+RUN apt-get update && apt-get install -y \
+    wget \
+    ros-jazzy-navigation2 \
+    ros-jazzy-nav2-bringup \
+    ros-jazzy-slam-toolbox \
+    ros-jazzy-tf-transformations \
+    && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh -O /tmp/miniconda.sh && \
+    bash /tmp/miniconda.sh -b -p /opt/conda && \
+    rm /tmp/miniconda.sh
+
+# Add conda to path
+ENV PATH=/opt/conda/bin:$PATH
+
+# Create conda environment with Python 3.8.10
+RUN conda create -n py38 python=3.8 -y
+SHELL ["conda", "run", "-n", "py38", "/bin/bash", "-c"]
+
+# Copy and install requirements
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+RUN mkdir -p /sim_ws/src
+
+RUN git clone --single-branch --branch AutoDRIVE-Devkit https://github.com/Tinker-Twins/AutoDRIVE.git
+RUN mv "/AutoDRIVE/ADSS Toolkit/autodrive_ros2" "/sim_ws/src/"
+
+RUN cd /sim_ws && colcon build
+
+# Activate conda environment in .bashrc
+RUN conda init
+RUN echo "conda activate py38" >> ~/.bashrc
+RUN echo "source /sim_ws/install/setup.bash" >> ~/.bashrc
+
+# CMD ["conda", "run", "-n", "py38", "bash"]
+CMD ["bash"]

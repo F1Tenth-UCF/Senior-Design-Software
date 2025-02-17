@@ -39,6 +39,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'odometry_node = ros2_gazebo_sim.odometry_node:main'
         ],
     },
 )

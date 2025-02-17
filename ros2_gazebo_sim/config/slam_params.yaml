@@ -1,4 +1,5 @@
 slam_toolbox:
   ros__parameters:
-    scan_topic: /car_1/scan
-    base_frame: base_link
+    scan_topic: /autodrive/f1tenth_1/lidar
+    base_frame: f1tenth_1
+    stack_size_to_use: 30000000

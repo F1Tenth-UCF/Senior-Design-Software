@@ -11,6 +11,8 @@ services:
       - novnc
     networks:
       - x11
+    ports:
+      - "4567:4567"
     stdin_open: true
     tty: true 
   novnc:

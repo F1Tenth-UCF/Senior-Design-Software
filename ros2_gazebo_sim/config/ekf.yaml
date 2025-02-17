@@ -1,24 +1,31 @@
 ekf_filter_node:
     ros__parameters:
       frequency: 30.0
-      two_d_mode: false
+      two_d_mode: true
       publish_acceleration: true
       publish_tf: true
       map_frame: map              # Defaults to "map" if unspecified
       odom_frame: odom            # Defaults to "odom" if unspecified
-      base_link_frame: base_link  # Defaults to "base_link" ifunspecified
+      base_link_frame: f1tenth_1  # Defaults to "base_link" ifunspecified
       world_frame: odom           # Defaults to the value ofodom_frame if unspecified
 
-      odom0: ackermann_controller/odometry
-      odom0_config: [true,  true,  true,
+      imu0: /autodrive/f1tenth_1/imu
+      imu0_config: [false, false, false,
+                    false, false, true,
+                    false, false, false,
+                    false, false, true,
+                    true, false, false]
+
+      ips: /autodrive/f1tenth_1/ips
+      ips_config: [true,  true,  false,
                       false, false, false,
                       false, false, false,
-                      false, false, true,
+                      false, false, false,
                       false, false, false]
 
-      imu0: car_1/imu
-      imu0_config: [false, false, false,
-                    true,  true,  true,
-                    false, false, false,
-                    false, false, false,
-                    false, false, false]
+      # odom: /wheel/odometry
+      # odom_config: [false,  false,  false,
+      #                 false, false, false,
+      #                 true, false, false,
+      #                 false, false, true,
+      #                 false, false, false]

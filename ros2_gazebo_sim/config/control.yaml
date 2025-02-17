@@ -17,8 +17,8 @@ ackermann_controller:
     open_loop: false
     velocity_rolling_window_size: 10
     position_feedback: false
-    rear_wheels_names: ['car_1_right_rear_wheel_joint', 'car_1_left_rear_wheel_joint']
-    front_wheels_names: ['car_1_right_steering_hinge_joint', 'car_1_left_steering_hinge_joint']
+    rear_wheels_names: ['rear_right_wheel', 'rear_left_wheel']
+    front_wheels_names: ['front_left_wheel', 'front_right_wheel']
 
     wheelbase: 0.325
     front_wheel_track: 0.2
