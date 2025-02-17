@@ -58,7 +58,7 @@ In another terminal to start the SLAM algorithm.
 
 Finally, run
 ```
-ros2 launch nav2_bringup navigation_launch.py params_file:=src/ros2_gazebo_sim/config/nav2_params.yaml
+po
 ```
 
 to start the navigation stack.

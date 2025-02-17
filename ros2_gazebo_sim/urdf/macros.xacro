@@ -163,6 +163,9 @@
     <collision>
       <xacro:chassis_geometry />
     </collision>
+    <inertial>
+      <xacro:chassis_inertial_params />
+    </inertial>
   </link>
 
   <joint name="$(arg robot_name)_base_link_joint" type="fixed">
@@ -171,17 +174,17 @@
     <child link="$(arg robot_name)_chassis" />
   </joint>
 
-  <link name="$(arg robot_name)_chassis_inertia">
+  <!-- <link name="$(arg robot_name)_chassis_inertia">
     <inertial>
       <xacro:chassis_inertial_params />
     </inertial>
-  </link>
+  </link> -->
 
-  <joint name="$(arg robot_name)_chassis_inertia_joint" type="fixed">
+  <!-- <joint name="$(arg robot_name)_chassis_inertia_joint" type="fixed">
     <origin xyz="0 0 0" rpy="0 0 0" />
     <parent link="$(arg robot_name)_chassis" />
     <child link="$(arg robot_name)_chassis_inertia" />
-  </joint>
+  </joint> -->
 
   <!-- Add the imu sensor -->
   <link name="$(arg robot_name)_imu_link">

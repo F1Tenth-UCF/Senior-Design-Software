@@ -39,6 +39,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'pose_broadcaster = ros2_gazebo_sim.pose_broadcaster:main',
         ],
     },
 )
