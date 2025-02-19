@@ -80,7 +80,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        inflation_radius: 0.15 # 0.55 originally
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:
@@ -122,7 +122,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        inflation_radius: 0.15 # 0.55 originally
       always_send_full_costmap: True
 
 planner_server:
@@ -202,8 +202,8 @@ controller_server:
       rotate_to_heading_angular_vel: 1.8
       transform_tolerance: 0.1
       use_velocity_scaled_lookahead_dist: false
-      min_approach_linear_velocity: 0.05
-      approach_velocity_scaling_dist: 0.6
+      min_approach_linear_velocity: 1.0
+      approach_velocity_scaling_dist: 0.1 # originally 0.6
       use_collision_detection: true
       max_allowed_time_to_collision_up_to_carrot: 1.0
       use_regulated_linear_velocity_scaling: true
@@ -217,6 +217,7 @@ controller_server:
       rotate_to_heading_min_angle: 0.785
       max_angular_accel: 3.2
       max_robot_pose_search_dist: 10.0
+      min_speed_xy: 1.0
 
 collision_monitor:
   ros__parameters:

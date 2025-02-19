@@ -87,14 +87,26 @@ Install slam-toolbox. In our case, the command was
 sudo apt-get install ros-foxy-slam-toolbox
 ```
 
+## Additional setup
+
+Install tf transformations to enable the `pose_broadcaster.py` script to publish the target pose to the car during the exploration phase of the race.
+
+```bash
+sudo apt-get install ros-foxy-tf-transformations
+```
+
 # Running the car
 
 Run the following commands to start the full stack (lidar + F1Tenth system + SLAM + NAV2):
 
 ```bash
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+export ROS_DOMAIN_ID=5
 ros2 launch f1tenth_racer f1tenth_sys_stacklaunch.py
 ```
 
 > Note: If difficulties are encountered, try running `ros2 daemon stop` followed by `ros2 daemon start` to restart the ROS 2 daemon, while the script is not running.
+
+> Note: The environment variables are set to enable remote communication between ROS 2 Foxy on the car and a different ROS 2 distro (e.g. Humble) running on a different Ubuntu machine on the same network. This is crucial if you want to visualize the car's topics in Rviz on a different machine while it is driving.
 
 <!-- > Note: One of the commands in this launch file uses sudo to open the FCU serial port. You may need to enter the car's password to continue. However, it is likely that the prompt to do so will be buried under the other output. If it seems to hang, try entering the password and pressing enter again. -->

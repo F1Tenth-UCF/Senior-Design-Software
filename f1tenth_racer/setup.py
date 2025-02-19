@@ -40,7 +40,8 @@ setup(
     entry_points={
         'console_scripts': [
             'topic_checker_node = f1tenth_racer.topic_checker_node:main',
-            'nav2_intermediary = f1tenth_racer.nav2_intermediary:main'
+            'nav2_intermediary = f1tenth_racer.nav2_intermediary:main',
+            'pose_broadcaster = f1tenth_racer.pose_broadcaster:main'
         ],
     },
 )
