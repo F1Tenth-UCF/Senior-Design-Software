@@ -10,6 +10,7 @@ from cv2 import dilate, erode
 import cv2
 import logging
 from typing import Tuple
+import time
 
 """
 This code serves as the mission controller for the race, guiding the behavior tree through the different stages of competition
@@ -131,17 +132,10 @@ class Nav2Intermediary(Node):
         masked_free_space = np.ma.masked_where(masked_data>40, masked_data)
         darkened_free_space = np.where(masked_free_space==0.0, 255, 0).astype(np.uint8)
         cv2.imwrite('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/darkened_free_space.png', darkened_free_space)
-        # dilated_free_space= dilate(darkened_free_space, np.ones((3,3)), iterations=5)
-        # eroded_free_space = erode(dilated_free_space, np.ones((3,3)), iterations=5)
 
         # create the walls array
         walls_array = np.where(data_reshaped<100, 0, 255).astype(np.uint8)
         cv2.imwrite('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/walls_array.png', walls_array)
-        # dilated_walls = dilate(walls_array, np.ones((3,3)), iterations=10)
-        # eroded_walls = erode(dilated_walls, np.ones((3,3)), iterations=10)
-
-        # cv2.imwrite('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/eroded_free_space.png', eroded_free_space)
-        # cv2.imwrite('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/eroded_walls.png', eroded_walls)
 
         # Find the connected components corresponding to the two walls
         walls_binary = (walls_array > 127).astype(np.uint8)
@@ -154,11 +148,61 @@ class Nav2Intermediary(Node):
         background_index = sorted_indices[0]
         sorted_indices = np.delete(sorted_indices, background_index, axis=0)
 
-        # ensures that we select the two wall segments that start at the origin, not a disconnected component later on.
-        # this works by comparing the x coordinate of the bottom left corner of the bounding box to x=0
-        distance_from_origin = [stats[index,0] - 0 for index in sorted_indices]
-        sorted_indices = sorted_indices[np.argsort(distance_from_origin, axis=0)]
-        selected_walls = sorted_indices[:2]
+        # find the two walls on either side of the car
+        up_ray = labels[0:int(y_pos), int(x_pos)]
+        down_ray = labels[int(y_pos):, int(x_pos)]
+
+        selected_walls = []
+        for val in up_ray[::-1]:
+            if val in sorted_indices:
+                selected_walls.append(val)
+                break
+        for val in down_ray:
+            if val in sorted_indices:
+                selected_walls.append(val)
+                break
+
+        ##### DEBUG #####
+        print("sorted_indices")
+        print(sorted_indices)
+        print(f"x_pos: {x_pos}, y_pos: {y_pos}")
+
+        # print a file containing a map and visualization of the rays used to find the walls
+        with open('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug.txt', 'w') as f:
+            labels_copy = labels.copy()
+            labels_copy[0:int(y_pos), int(x_pos)] = 8
+            labels_copy[int(y_pos):, int(x_pos)] = 9
+
+            # Set NumPy print options to prevent truncation
+            np.set_printoptions(threshold=np.inf, linewidth=np.inf)
+            f.write(f"Labels markup array: \n{labels_copy}\n\nUp ray: \n{up_ray}\n\nDown ray: \n{down_ray}")
+            # Reset NumPy print options to default
+            np.set_printoptions(threshold=1000, linewidth=75)
+
+        # create an image of the selected walls
+        selected_walls_image = np.zeros_like(walls_array)
+        for wall in selected_walls:
+            selected_walls_image[labels == wall] = 255
+        # Draw red pixels around target point
+        radius = 5
+        
+        # Create RGB version of image
+        selected_walls_rgb = cv2.cvtColor(selected_walls_image, cv2.COLOR_GRAY2RGB)
+        
+        # Draw red circle around target point
+        cv2.circle(selected_walls_rgb, (int(x_pos), int(y_pos)), radius, (0,0,255), -1)
+        
+        # Convert back to grayscale for consistency with rest of code
+        selected_walls_image = cv2.cvtColor(selected_walls_rgb, cv2.COLOR_RGB2GRAY)
+        cv2.imwrite('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/selected_walls.png', selected_walls_image)
+
+        ##### DEBUG #####
+
+        try:
+            assert len(selected_walls) == 2
+        except AssertionError:
+            self.get_logger().error(f"Found {len(selected_walls)} walls")
+            return
 
         self.get_logger().info(f"Got {num_labels} connected components")
         self.get_logger().debug(str(stats))
