@@ -1,6 +1,6 @@
 import rclpy
 from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Path
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
@@ -11,6 +11,8 @@ import cv2
 import logging
 from typing import Tuple
 import time
+import csv
+import os
 
 """
 This code serves as the mission controller for the race, guiding the behavior tree through the different stages of competition
@@ -107,14 +109,44 @@ def find_endpoint(label: int, labels: np.ndarray, x_pos: float) -> np.ndarray:
 
     return deepest_point
 
-class Nav2Intermediary(Node):
+class PoseBroadcaster(Node):
 
     def __init__(self):
-        super().__init__('nav2_intermediary')
+        super().__init__('pose_broadcaster')
 
         # pubsub setup for pose broadcasting
         self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
         self.pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 20)
+        self.plan_subscriber = self.create_subscription(Path, '/plan', self.plan_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+        
+        # Timing variables
+        self.last_pose_publish_time = None
+        
+        # CSV file setup
+        self.csv_file_path = os.path.expanduser('~/f1tenth_ws/pose_plan_timing.csv')
+        self.create_csv_file()
+        
+    def create_csv_file(self):
+        """Create the CSV file with headers if it doesn't exist"""
+        if not os.path.exists(self.csv_file_path):
+            with open(self.csv_file_path, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['pose_publish_time', 'plan_receive_time', 'time_difference_seconds'])
+            self.get_logger().info(f"Created timing CSV file at {self.csv_file_path}")
+    
+    def plan_callback(self, msg: Path):
+        """Callback for the plan topic. Records timing information between pose publishing and plan receiving."""
+        if self.last_pose_publish_time is not None:
+            current_time = time.time()
+            time_difference = current_time - self.last_pose_publish_time
+            
+            # Write to CSV
+            with open(self.csv_file_path, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([self.last_pose_publish_time, current_time, time_difference])
+            
+            self.get_logger().info(f"Plan received after {time_difference:.4f} seconds")
+            self.last_pose_publish_time = None
 
     def map_callback(self, msg: OccupancyGrid):
         """Callback for the map topic. Determines the next goal pose for exploring the map"""
@@ -258,15 +290,21 @@ class Nav2Intermediary(Node):
         pose.pose.orientation.z = quaternion[2]
         pose.pose.orientation.w = quaternion[3]
 
+        # Record the time before publishing the pose
+        self.last_pose_publish_time = time.time()
         self.pose_publisher.publish(pose)
+
+    def __del__(self):
+        if self.csv_file is not None:
+            self.csv_file.close()
 
 def main(args=None):
     rclpy.init(args=args)
-    nav2_intermediary = Nav2Intermediary()
+    pose_broadcaster = PoseBroadcaster()
 
-    rclpy.spin(nav2_intermediary)
+    rclpy.spin(pose_broadcaster)
     
-    nav2_intermediary.destroy_node()
+    pose_broadcaster.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
