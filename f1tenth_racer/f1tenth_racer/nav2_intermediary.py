@@ -68,12 +68,7 @@ class Nav2Intermediary(Node):
 		
 		vel_msg = AckermannDriveStamped()
 		vel_msg.drive.steering_angle = msg.angular.z
-            
-		# hack to get around nav2 giving a very low velocity to the car despite configuration settings telling it otherwise. Will fix later
-		if msg.linear.x < 0.35:
-			vel_msg.drive.speed = 0.35
-		else:
-			vel_msg.drive.speed = msg.linear.x
+		vel_msg.drive.speed = msg.linear.x
 		
 		# Check if this is the first non-zero velocity
 		if not self.first_nonzero_published and vel_msg.drive.speed > 0:

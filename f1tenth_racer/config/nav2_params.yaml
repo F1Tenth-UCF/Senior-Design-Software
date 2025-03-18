@@ -194,30 +194,19 @@ controller_server:
       stateful: True
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 5.0
-      lookahead_dist: 0.6
-      min_lookahead_dist: 0.3
-      max_lookahead_dist: 0.9
-      lookahead_time: 1.5
-      rotate_to_heading_angular_vel: 1.8
-      transform_tolerance: 0.1
-      use_velocity_scaled_lookahead_dist: false
-      min_approach_linear_velocity: 1.0
-      approach_velocity_scaling_dist: 0.1 # originally 0.6
-      use_collision_detection: true
-      max_allowed_time_to_collision_up_to_carrot: 1.0
-      use_regulated_linear_velocity_scaling: true
-      use_fixed_curvature_lookahead: false
-      curvature_lookahead_dist: 0.25
-      use_cost_regulated_linear_velocity_scaling: false
-      regulated_linear_scaling_min_radius: 0.9
-      regulated_linear_scaling_min_speed: 0.25
-      use_rotate_to_heading: true
-      allow_reversing: false
-      rotate_to_heading_min_angle: 0.785
-      max_angular_accel: 3.2
-      max_robot_pose_search_dist: 10.0
-      min_speed_xy: 1.0
+      desired_linear_vel: 0.4
+      max_linear_accel: 10.0
+      max_linear_decel: 10.0
+      lookahead_dist: 0.5 # look ahead 0.5 meters along the path
+      transform_tolerance: 0.1 # not sure what this does
+      use_velocity_scaled_lookahead_dist: False
+      use_approach_linear_velocity_scaling: False
+      use_cost_regulated_linear_velocity_scaling: False
+      use_rotate_to_heading: False
+      # below this ensures that we slow down for turns
+      use_regulated_linear_velocity_scaling: True # changes the velocity based on the curvature of the path
+      regulated_linear_scaling_min_speed: 0.3 # minimum speed to maintain
+      regulated_linear_scaling_min_radius: 0.8 # turning radius is 0.635, so we go a bit above that
 
 collision_monitor:
   ros__parameters:
@@ -229,10 +218,10 @@ collision_monitor:
     state_topic: "collision_monitor_state"
     transform_tolerance: 0.5
     source_timeout: 5.0
-    base_shift_correction: true
+    base_shift_correction: True
     stop_pub_timeout: 2.0
     # enable_stamped_cmd_vel: true
-    use_realtime_priority: false
+    use_realtime_priority: False
     polygons: ["PolygonStop", "PolygonSlow", "FootprintApproach"]
     PolygonStop:
       type: "circle"
@@ -247,7 +236,7 @@ collision_monitor:
       points: "[[0.5, 0.5], [0.5, -0.5], [-0.5, -0.5], [-0.5, 0.5]]"
       action_type: "slowdown"
       min_points: 4
-      slowdown_ratio: 0.3
+      slowdown_ratio: 0.7
       visualize: True
       polygon_pub_topic: "polygon_slowdown"
       enabled: True

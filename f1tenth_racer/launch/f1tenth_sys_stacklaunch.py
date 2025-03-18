@@ -144,7 +144,7 @@ def generate_launch_description():
 
     # slam tool box
     slam_toolbox_node = ExecuteProcess(
-        cmd=['ros2', 'launch', 'slam_toolbox', 'online_async_launch.py', 'use_sim_time:=False'],
+        cmd=['ros2', 'launch', 'slam_toolbox', 'online_async_launch.py', 'use_sim_time:=False', 'params_file:=' + format_share_path('config/slam_params.yaml')],
     )
 
     # nav2
