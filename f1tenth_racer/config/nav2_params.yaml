@@ -79,8 +79,8 @@ global_costmap:
           # obstacle_min_range: 0.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.15 # 0.55 originally
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.10 # 0.55 originally
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:
@@ -121,8 +121,8 @@ local_costmap:
           data_type: "LaserScan"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 3.0
-        inflation_radius: 0.15 # 0.55 originally
+        cost_scaling_factor: 5.0
+        inflation_radius: 0.10 # 0.55 originally
       always_send_full_costmap: True
 
 planner_server:
@@ -352,7 +352,8 @@ bt_navigator:
     enable_groot_monitoring: True
     groot_zmq_publisher_port: 1666
     groot_zmq_server_port: 1667
-    default_bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+    bt_xml_filename: "/home/cavrel/f1tenth_ws/src/Senior-Design-Software/f1tenth_racer/config/behavior_tree.xml"
+    default_bt_xml_filename: "/home/cavrel/f1tenth_ws/src/Senior-Design-Software/f1tenth_racer/config/behavior_tree.xml" #"navigate_w_replanning_and_recovery.xml"
     plugin_lib_names:
     - nav2_compute_path_to_pose_action_bt_node
     - nav2_follow_path_action_bt_node
