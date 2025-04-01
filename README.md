@@ -95,6 +95,10 @@ Install tf transformations to enable the `pose_broadcaster.py` script to publish
 sudo apt-get install ros-foxy-tf-transformations
 ```
 
+In `src/f1tenth_system/vesc/vesc_ackermann/src/vesc_to_odom.cpp`, change `double current_speed = (-state->state.speed - speed_to_erpm_offset_) / speed_to_erpm_gain_;` to `double current_speed = -(-state->state.speed - speed_to_erpm_offset_) / speed_to_erpm_gain_;`
+
+In `src/f1tenth_system/f1tenth_stack/config/joy_teleop.yaml`, comment out `device_name: /dev/input/joypad-f710`.
+
 # Running the car
 
 Run the following commands to start the full stack (lidar + F1Tenth system + SLAM + NAV2):
