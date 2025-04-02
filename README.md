@@ -107,7 +107,8 @@ Run the following commands to start the full stack (lidar + F1Tenth system + SLA
 export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 export ROS_DOMAIN_ID=5
 ros2 launch f1tenth_racer f1tenth_sys_stacklaunch.py
-ros2 run f1tenth_racer pose_broadcaster_2
+# ros2 run f1tenth_racer pose_broadcaster_2
+ros2 run f1tenth_racer wall_follower
 ```
 
 > Note: If difficulties are encountered, try running `ros2 daemon stop` followed by `ros2 daemon start` to restart the ROS 2 daemon, while the script is not running.
