@@ -349,7 +349,7 @@ class FollowTheGapNode(Node):
         # Create publisher to /drive
         self.drive_pub = self.create_publisher(
             AckermannDriveStamped,
-            '/drive',
+            '/gap_follow/cmd_vel',
             10
         )
 

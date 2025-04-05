@@ -124,3 +124,9 @@ ros2 service call /slam_toolbox/serialize_map \
   slam_toolbox/srv/SerializePoseGraph \
   "{filename: '/home/cavrel/f1tenth_ws/src/Senior-Design-Software/saved_graph.posegraph'}"
 ```
+
+```
+ros2 service call /slam_toolbox/save_map \
+  slam_toolbox/srv/SaveMap \
+  "{name: {data: '/home/cavrel/f1tenth_ws/src/Senior-Design-Software/saved_map'}}"
+```
