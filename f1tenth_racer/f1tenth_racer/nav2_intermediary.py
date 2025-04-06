@@ -1,9 +1,12 @@
 import rclpy
+from scipy.spatial import cKDTree
+import numpy as np
 from geometry_msgs.msg import Twist, TwistStamped, PoseStamped, TransformStamped, Point
 from ackermann_msgs.msg import AckermannDriveStamped
 from nav_msgs.msg import Odometry
 import rclpy.time
 from sensor_msgs.msg import NavSatFix, Imu
+from visualization_msgs.msg import MarkerArray
 from mavros_msgs.msg import AttitudeTarget, PositionTarget
 from std_msgs.msg import Float64, Bool, Header
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
@@ -35,6 +38,7 @@ class Nav2Intermediary(Node):
 		self.velo_subscriber = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.wall_follow_subscriber = self.create_subscription(AckermannDriveStamped, '/wall_follower/cmd_vel', self.wall_follow_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.killswitch_subscriber = self.create_subscription(Bool, '/f1tenth_racer/killswitch', self.killswitch_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.pose_graph_subscriber = self.create_subscription(MarkerArray, '/slam_toolbox/graph_visualization', self.pose_graph_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
 
 		# TF2 setup for transform listening
@@ -52,6 +56,28 @@ class Nav2Intermediary(Node):
 		
 		# Timer for recording odometry errors (runs at 10Hz)
 		self.timer = self.create_timer(0.1, self.record_odometry_error)
+
+	def pose_graph_callback(self, msg: MarkerArray):
+		"""During the exploraiton phase, checks for loop closure. During raceline computation and execution, does nothing."""
+
+		# order the markers by their id, ensuring they're in the order they were added to the graph
+		marker_array = np.zeros((len(msg.markers), 2))
+		for marker in msg.markers:
+			marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
+
+		# find the closest points to the original scan
+		tree = cKDTree(marker_array)
+		idxs = tree.query_ball_point(marker_array[0, :], 0.1)
+		closures = []
+
+		# determine if any of those closest points are more than 25 scans later. This would indicate that the car has looped back around to the starting point
+		for i in idxs:
+			if i <= 25:
+				continue
+
+			closures.append(i)
+
+		self.get_logger().info(f"Loop closure detected at {len(closures)} points.")
 
 	def wall_follow_callback(self, msg: AckermannDriveStamped):
 		"""Callback for the wall follower topic."""
