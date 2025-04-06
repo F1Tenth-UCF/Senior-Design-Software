@@ -105,6 +105,12 @@ Make the following changes within the repository:
     - Set `opt_type` to `mincurv`
     - Comment out `pkg_resources.require(dependencies)`
 
+Then run `pip show trajectory_planning_helpers`. Take the location displayed as `TRAJ_HELP_PATH`. Navigate to `TRAJ_HELP_PATH/trajectory_planning_helpers/spline_approximation.py` and within the `dist_to_p` function, add the following line immediately before the return statement:
+
+```python
+s = np.array(s).flatten()
+```
+
 Then, run `pip install -r global_racetrajectory_optimization/requirements.txt` to install the dependencies.
 
 Finally, in `src/Senior-Design-Software/f1tenth_racer/f1tenth_racer/nav2_intermediary.py`, change `OPTIMIZER_PATH` to the full path of the `global_racetrajectory_optimization` repository.
