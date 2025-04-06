@@ -107,13 +107,6 @@ def generate_launch_description():
         name='vesc_driver_node',
         parameters=[LaunchConfiguration('vesc_config')]
     )
-    robot_localization_node = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='screen',
-        parameters=[format_share_path('config/ekf.yaml'), {'use_sim_time': False}]
-    )
     throttle_interpolator_node = Node(
         package='f1tenth_stack',
         executable='throttle_interpolator',
@@ -180,7 +173,6 @@ def generate_launch_description():
     # start the car control stack
     ld.add_action(joy_node)
     ld.add_action(joy_teleop_node)
-    # ld.add_action(robot_localization_node)
 
     ld.add_action(ackermann_to_vesc_node)
     ld.add_action(vesc_to_odom_node)
@@ -208,7 +200,7 @@ def generate_launch_description():
     ld.add_action(RegisterEventHandler(
             OnProcessExit(
                 target_action=odom_checker, # wait for fcu port to be open
-                on_exit=[nav2_node, nav2_intermediary_node] # start mavros and start listening for odom
+                on_exit=[nav2_intermediary_node] #nav2_node # start mavros and start listening for odom
             )
         ))
 

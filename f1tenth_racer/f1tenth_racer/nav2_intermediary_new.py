@@ -142,7 +142,7 @@ class Nav2Intermediary(Node):
 		self.get_logger().info("Track preprocessed. Writing to csv.")
 
 		# write the track data to a csv file
-		with open(f'{OPTIMIZER_PATH}/inputs/tracks/hec_track.csv', 'w', newline='') as csvfile:
+		with open(f'hec_track.csv', 'w', newline='') as csvfile: #{OPTIMIZER_PATH}/inputs/tracks/
 			writer = csv.writer(csvfile, delimiter=',')
 			writer.writerow(['# x_m', 'y_m', 'w_tr_right_m', 'w_tr_left_m'])
 			for i in range(len(centerline)):
@@ -206,6 +206,12 @@ class Nav2Intermediary(Node):
 			marker_array = np.zeros((len(msg.markers), 2))
 			for marker in msg.markers:
 				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
+
+			# save the marker array as an image using matplotlib
+			plt.figure(figsize=(10, 10))
+			plt.scatter(marker_array[:, 0], marker_array[:, 1], s=10, c='blue')
+			plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
+			plt.close()
 
 			# find the closest points to the original scan
 			tree = cKDTree(marker_array)
