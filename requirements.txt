@@ -1,0 +1,8 @@
+scikit-image
+networkx
+matplotlib
+numpy
+pandas
+scipy
+sknw
+shapely

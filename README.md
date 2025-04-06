@@ -87,6 +87,28 @@ Install slam-toolbox. In our case, the command was
 sudo apt-get install ros-foxy-slam-toolbox
 ```
 
+## Setting up Raceline Optimization
+
+Clone the following repository into the base directory of your workspace:
+
+```bash
+git clone https://github.com/TUMFTM/global_racetrajectory_optimization.git
+```
+
+Make the following changes within the repository:
+- in `global_racetrajectory_optimization/requirements.txt`, remove all the versions from the package names.
+- replace `global_racetrajectory_optimization/params/racecar.ini` with `src/Senior-Design-Software/f1tenth_racer/config/racecar.ini`
+- in `/home/cavrel/f1tenth_ws/global_racetrajectory_optimization/main_globaltraj.py`, make the following changes
+    - Set `debug` to `False`
+    - Set all `plot_opts` to `False`
+    - Set `file_paths["track_name"]` to `hec_track`
+    - Set `opt_type` to `mincurv`
+    - Comment out `pkg_resources.require(dependencies)`
+
+Then, run `pip install -r global_racetrajectory_optimization/requirements.txt` to install the dependencies.
+
+Finally, in `src/Senior-Design-Software/f1tenth_racer/f1tenth_racer/nav2_intermediary.py`, change `OPTIMIZER_PATH` to the full path of the `global_racetrajectory_optimization` repository.
+
 ## Additional setup
 
 Install tf transformations to enable the `pose_broadcaster.py` script to publish the target pose to the car during the exploration phase of the race.
