@@ -33,6 +33,7 @@ class Nav2Intermediary(Node):
 
 		# pubsub setup
 		self.velo_subscriber = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.wall_follow_subscriber = self.create_subscription(AckermannDriveStamped, '/wall_follower/cmd_vel', self.wall_follow_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.killswitch_subscriber = self.create_subscription(Bool, '/f1tenth_racer/killswitch', self.killswitch_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
 
@@ -51,6 +52,10 @@ class Nav2Intermediary(Node):
 		
 		# Timer for recording odometry errors (runs at 10Hz)
 		self.timer = self.create_timer(0.1, self.record_odometry_error)
+
+	def wall_follow_callback(self, msg: AckermannDriveStamped):
+		"""Callback for the wall follower topic."""
+		self.vel_publisher.publish(msg)
 
 	def initialize_csv_file(self):
 		"""Initialize the CSV file with headers."""
