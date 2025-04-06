@@ -1,40 +1,29 @@
 import rclpy
-from geometry_msgs.msg import Twist, TwistStamped, PoseStamped, TransformStamped, Point
+from geometry_msgs.msg import Twist
 from visualization_msgs.msg import MarkerArray
 from ackermann_msgs.msg import AckermannDriveStamped
-from nav_msgs.msg import Odometry, OccupancyGrid
+from nav_msgs.msg import OccupancyGrid
 import rclpy.time
-from sensor_msgs.msg import NavSatFix, Imu
-from mavros_msgs.msg import AttitudeTarget, PositionTarget
-from std_msgs.msg import Float64, Bool, Header
+from std_msgs.msg import Bool
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
-from mavros_msgs.srv import CommandBool, SetMode, CommandLong
 import threading
-import tf2_ros
 import cv2
-from scipy.ndimage import binary_closing, binary_opening
-from scipy.ndimage import distance_transform_edt, map_coordinates
+from scipy.ndimage import binary_closing, binary_opening, distance_transform_edt
 from scipy.spatial import cKDTree
 from scipy.interpolate import CubicSpline
-from skimage.morphology import medial_axis, skeletonize
+from skimage.morphology import skeletonize
 from skimage.morphology import flood_fill
-import networkx as nx
 import sknw
-import matplotlib.pyplot as plt
 import numpy as np
 from shapely.geometry import Polygon
-import pandas as pd
 import numpy as np
 from scipy.spatial import cKDTree
-from time import time, sleep
+from time import sleep
 import csv
 import os
-import math
-from datetime import datetime
-from tf2_ros import Buffer, TransformListener
-from rclpy.duration import Duration
+import pandas as pd
 
 """
 Because we are using a PixHawk FCU to send signals to the ESC, we must go through initialization steps to arm the motors.
@@ -142,7 +131,7 @@ class Nav2Intermediary(Node):
 		self.get_logger().info("Track preprocessed. Writing to csv.")
 
 		# write the track data to a csv file
-		with open(f'hec_track.csv', 'w', newline='') as csvfile: #{OPTIMIZER_PATH}/inputs/tracks/
+		with open(f'{OPTIMIZER_PATH}/inputs/tracks/hec_track.csv', 'w', newline='') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',')
 			writer.writerow(['# x_m', 'y_m', 'w_tr_right_m', 'w_tr_left_m'])
 			for i in range(len(centerline)):
@@ -155,21 +144,20 @@ class Nav2Intermediary(Node):
 
 		self.get_logger().info("Track data written to csv. Running optimization.")
 
-		# # run the optimization
-		# os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py')
-		# sleep(5)
+		# run the optimization
+		os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py')
+		sleep(5)
 
-		# # read the output file
-		# if os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
-		# 	df = pd.read_csv(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv')
-		# 	df = df.drop(columns=['Unnamed: 0'])
-		# 	df.to_csv(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv', index=False)
-		# 	self.get_logger().info("Raceline file found. Switching to raceline execution.")
-		# else:
-			# self.get_logger().error("Raceline file not found.")
-			# self.destroy_node()
-			# self.shutdown_flag = True
-
+		# read the output file
+		if os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
+			df = pd.read_csv(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv')
+			df = df.drop(columns=['Unnamed: 0'])
+			df.to_csv(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv', index=False)
+			self.get_logger().info("Raceline file found.")
+		else:
+			self.get_logger().error("Raceline file not found.")
+		
+		self.get_logger().info("EXITING PROGRAM...WOOHOO!")
 		self.destroy_node()
 		self.shutdown_flag = True
 
@@ -206,12 +194,6 @@ class Nav2Intermediary(Node):
 			marker_array = np.zeros((len(msg.markers), 2))
 			for marker in msg.markers:
 				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
-
-			# save the marker array as an image using matplotlib
-			plt.figure(figsize=(10, 10))
-			plt.scatter(marker_array[:, 0], marker_array[:, 1], s=10, c='blue')
-			plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
-			plt.close()
 
 			# find the closest points to the original scan
 			tree = cKDTree(marker_array)
