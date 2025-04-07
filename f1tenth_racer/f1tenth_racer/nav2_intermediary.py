@@ -26,7 +26,7 @@ from time import sleep
 import csv
 import os
 import pandas as pd
-
+import uuid
 """
 Because we are using a PixHawk FCU to send signals to the ESC, we must go through initialization steps to arm the motors.
 When initialized, this class goes through these steps.
@@ -38,11 +38,13 @@ COMPUTING_RACELINE = 1
 RACELINE = 2
 
 OPTIMIZER_PATH = '/home/cavrel/f1tenth_ws/global_racetrajectory_optimization'
+DEBUG_KEY = str(uuid.uuid4())
+os.makedirs(f"/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images", exist_ok=True)
 
 def display_binary_image(image, title):
 	plt.figure(figsize=(10, 8))
 	plt.imshow(image, cmap='gray')
-	plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/{title}.png')
+	plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
 	plt.close()
 
 def plot_graph(G, title):
@@ -60,11 +62,10 @@ def plot_graph(G, title):
     plt.axis('equal')
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/{title}.png')
+    plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
     plt.close()
 
 # TODO: This returns a track which may not be closed after smoothing 
-# TODO: sometimes, the graph has an additional spurious edge that is not part of the track because of how the skeletonization is done. We can trim this off of the sknw graph, but aren't doing so right now.
 def preprocess_track(map: OccupancyGrid):
 	"""Converts the occupancy grid into a centerline and track width data."""
 
@@ -86,6 +87,10 @@ def preprocess_track(map: OccupancyGrid):
 	binary_space = np.zeros((gray_space.shape[0], gray_space.shape[1]), dtype=np.uint8)
 	binary_space[gray_space > 127] = 1
 
+	### DEBUGGING CODE ###
+	np.save(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/track_raw.npy', binary_space)
+	### DEBUGGING CODE ###
+
 	# eliminate holes and noise
 	track = binary_opening(binary_space, iterations=2)
 	track = binary_closing(track, iterations=2)
@@ -98,9 +103,27 @@ def preprocess_track(map: OccupancyGrid):
 
 	display_binary_image(skel, 'skel')
 
-	# convert that to a path graph
+	# convert that to a path graph. We also need to check for spurious edges that are not part of the track, and remove them.
 	G = sknw.build_sknw(skel)
 	plot_graph(G, 'graph')
+
+	leaf_nodes_exist = True
+	while leaf_nodes_exist: # make repeated iterations through the graph until there are either no leaf nodes or only 1 node left
+		nodes_to_remove = []
+
+		for node in G.nodes():
+			if G.degree[node] == 1 and len(nodes_to_remove) < len(G.nodes()) - 1:
+				nodes_to_remove.append(node)
+
+		if len(nodes_to_remove) == 0:
+			leaf_nodes_exist = False
+
+		for node in nodes_to_remove:
+			G.remove_node(node)
+
+	plot_graph(G, 'graph_no_spurs')
+
+	# extract the ordered points from the graph
 	path = []
 	for (s, e) in G.edges():
 		path.extend(G[s][e]['pts'])
@@ -165,7 +188,7 @@ def preprocess_track(map: OccupancyGrid):
 		plt.arrow(p1x, p1y, right_vector[0], right_vector[1], head_width=0.1, head_length=0.1, color='red')
 		plt.arrow(p1x, p1y, left_vector[0], left_vector[1], head_width=0.1, head_length=0.1, color='blue')
 
-	plt.savefig('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/centerline_debug.png')
+	plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
 	plt.close()
 	### DEBUGGING CODE ###
 
@@ -210,6 +233,10 @@ class Nav2Intermediary(Node):
 					f"{left_width[i]:.2f}"      # w_tr_left_m
 				])
 
+		### DEBUGGING CODE ###
+		os.system(f"cp {OPTIMIZER_PATH}/inputs/tracks/hec_track.csv /home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/hec_track.csv")
+		### DEBUGGING CODE ###
+
 		self.get_logger().info("Track data written to csv. Running optimization.")
 
 		# run the optimization
@@ -218,9 +245,6 @@ class Nav2Intermediary(Node):
 
 		# read the output file
 		if os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
-			df = pd.read_csv(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv')
-			df = df.drop(columns=['Unnamed: 0'])
-			df.to_csv(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv', index=False)
 			self.get_logger().info("Raceline file found.")
 		else:
 			self.get_logger().error("Raceline file not found.")
@@ -254,7 +278,6 @@ class Nav2Intermediary(Node):
 		"""Stores the latest map"""
 		self.map = msg
 
-	# TODO: If the loop closes to a point other than the starting point, it does not get detected as a closure.
 	def pose_graph_callback(self, msg: MarkerArray):
 		"""During the exploraiton phase, checks for loop closure. During raceline computation and execution, does nothing."""
 
@@ -273,7 +296,7 @@ class Nav2Intermediary(Node):
 			plt.title(f'Pose Graph Markers - {len(marker_array)} points')
 			plt.xlabel('X Position (m)')
 			plt.ylabel('Y Position (m)')
-			plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
+			plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
 			plt.close()
 			### DEBUGGING CODE ###
 
