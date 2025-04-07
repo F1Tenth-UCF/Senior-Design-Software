@@ -25,8 +25,7 @@ from scipy.spatial import cKDTree
 from time import sleep
 import csv
 import os
-import pandas as pd
-import uuid
+import time
 """
 Because we are using a PixHawk FCU to send signals to the ESC, we must go through initialization steps to arm the motors.
 When initialized, this class goes through these steps.
@@ -38,9 +37,10 @@ COMPUTING_RACELINE = 1
 RACELINE = 2
 
 OPTIMIZER_PATH = '/home/cavrel/f1tenth_ws/global_racetrajectory_optimization'
-DEBUG_KEY = str(uuid.uuid4())
+DEBUG_KEY = str(time.time())
 os.makedirs(f"/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images", exist_ok=True)
 
+# TODO: fix issue where graph created by sknw is has no cycles. doesn't happen much anymore since i modified the slam params to filter out far away lidar points.
 def display_binary_image(image, title):
 	plt.figure(figsize=(10, 8))
 	plt.imshow(image, cmap='gray')
@@ -210,7 +210,7 @@ def preprocess_track(map: OccupancyGrid):
 
 	return centerline, right_width, left_width
 
-def format_pose(row, coordinate_offset, raceline_offset):
+def format_pose(row, coordinate_offset, raceline_offset, angle_offset):
 
     x_orig = float(row[1]) + coordinate_offset[0]
     y_orig = float(row[2]) + coordinate_offset[1]
@@ -353,7 +353,9 @@ class Nav2Intermediary(Node):
 
 	def map_callback(self, msg: OccupancyGrid):
 		"""Stores the latest map"""
-		self.map = msg
+
+		if self.state == EXPLORATION: # this ensures that the map isn't updates while the raceline is being computed
+			self.map = msg
 
 	def pose_graph_callback(self, msg: MarkerArray):
 		"""During the exploraiton phase, checks for loop closure. During raceline computation and execution, does nothing."""
