@@ -210,12 +210,10 @@ def preprocess_track(map: OccupancyGrid):
 
 	return centerline, right_width, left_width
 
-def format_pose(row, offset=[0, 0], first=False):
-    if first:
-        offset = [-float(row[1]), -float(row[2])]
+def format_pose(row, coordinate_offset, raceline_offset):
 
-    x_orig = float(row[1]) + offset[0]
-    y_orig = float(row[2]) + offset[1]
+    x_orig = float(row[1]) + coordinate_offset[0]
+    y_orig = float(row[2]) + coordinate_offset[1]
     psi_orig = float(row[3]) # Heading of raceline in current point from -pi to +pi rad. Zero is north (along y-axis).
 
     # rotate the raceline 90 degrees clockwise
@@ -227,9 +225,9 @@ def format_pose(row, offset=[0, 0], first=False):
     y = -y
     psi = -psi
 
-    # translate for final fit # TODO: make this dynamic
-    x += 0.6
-    y -= 0.1
+    # translate for final fit
+    x += raceline_offset[0]
+    y += raceline_offset[1]
 
     pose = PoseStamped()
     pose.header.frame_id = 'map'
@@ -237,6 +235,8 @@ def format_pose(row, offset=[0, 0], first=False):
     pose.pose.position.y = y
     pose.pose.position.z = 0.0
     pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi/2), w=np.cos(psi/2))
+    
+    return pose
 
 class Nav2Intermediary(Node):
 
@@ -293,7 +293,7 @@ class Nav2Intermediary(Node):
 		self.get_logger().info("Track data written to csv. Running optimization.")
 
 		# run the optimization
-		os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py')
+		os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py --x {-1*self.map.info.origin.position.x} --y {-1*self.map.info.origin.position.y}')
 		sleep(5)
 
 		# read the output file
@@ -303,18 +303,22 @@ class Nav2Intermediary(Node):
 			raceline = Path()
 			raceline.header.frame_id = 'map'
 
+			# begin broadcasting the raceline
 			with open(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv', 'r') as csvfile:
 				reader = csv.reader(csvfile, delimiter=';')
 				for i in range(3):# skip the header rows
 					next(reader)
 
 				first_row = next(reader)
-				first_pose = format_pose(first_row, first=True)
-				offset = [-float(first_row[1]), -float(first_row[2])]
+
+				coordinate_offset = np.array([-float(first_row[1]), -float(first_row[2])]) # offset from the optimizer frame to the map frame
+				raceline_offset = np.array([float(first_row[1]) + self.map.info.origin.position.x, float(first_row[2]) + self.map.info.origin.position.y]) # offset between the centerline and the raceline
+
+				first_pose = format_pose(first_row, coordinate_offset, raceline_offset)
 				raceline.poses.append(first_pose)
 
 				for row in reader:
-					pose = format_pose(row, offset)
+					pose = format_pose(row, coordinate_offset, raceline_offset)
 					raceline.poses.append(pose)
 
 			self.raceline = raceline

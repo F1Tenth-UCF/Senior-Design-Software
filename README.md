@@ -104,6 +104,19 @@ Make the following changes within the repository:
     - Set `file_paths["track_name"]` to `hec_track`
     - Set `opt_type` to `mincurv`
     - Comment out `pkg_resources.require(dependencies)`
+    - add the following lines under the imports:
+
+        ```python
+        import argparse
+
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--x", type=float, default=0.0)
+        parser.add_argument("--y", type=float, default=-47.0)
+        args = parser.parse_args()
+        ```
+
+    - set `set_new_start` to `True`
+    - set `new_start` to `np.array([args.x, args.y])`
 
 Then run `pip show trajectory_planning_helpers`. Take the location displayed as `TRAJ_HELP_PATH`. Navigate to `TRAJ_HELP_PATH/trajectory_planning_helpers/spline_approximation.py` and within the `dist_to_p` function, add the following line immediately before the return statement:
 
