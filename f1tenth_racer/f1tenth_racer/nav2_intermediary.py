@@ -64,6 +64,7 @@ def plot_graph(G, title):
     plt.close()
 
 # TODO: This returns a track which may not be closed after smoothing 
+# TODO: sometimes, the graph has an additional spurious edge that is not part of the track because of how the skeletonization is done. We can trim this off of the sknw graph, but aren't doing so right now.
 def preprocess_track(map: OccupancyGrid):
 	"""Converts the occupancy grid into a centerline and track width data."""
 
@@ -263,11 +264,6 @@ class Nav2Intermediary(Node):
 			for marker in msg.markers:
 				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
 
-			# find the closest points to the original scan
-			tree = cKDTree(marker_array)
-			idxs = tree.query_ball_point(marker_array[0, :], 0.1)
-			closures = []
-
 			### DEBUGGING CODE ###
 			plt.figure(figsize=(10, 10))
 			# Create a colormap that shows the order of markers (from blue to red)
@@ -281,12 +277,18 @@ class Nav2Intermediary(Node):
 			plt.close()
 			### DEBUGGING CODE ###
 
-			# determine if any of those closest points are more than 25 scans later. This would indicate that the car has looped back around to the starting point
-			for i in idxs:
-				if i <= 10:
-					continue
+			tree = cKDTree(marker_array)
 
-				closures.append(i)
+			# for each marker, we find the indices of the markers within 0.1m. If any of these markers is more than 10 scans later, we have a loop closure.
+			closures = []
+			for i in range(len(marker_array)):
+				idxs = tree.query_ball_point(marker_array[i, :], 0.1)
+				
+				for j in idxs:
+					if j <= i + 10:
+						continue
+
+					closures.append(j)
 
 			self.get_logger().info(f"Loop closure detected at {len(closures)} points.")
 
