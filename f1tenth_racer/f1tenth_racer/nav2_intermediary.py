@@ -1,8 +1,8 @@
 import rclpy
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Quaternion, PoseStamped
 from visualization_msgs.msg import MarkerArray
 from ackermann_msgs.msg import AckermannDriveStamped
-from nav_msgs.msg import OccupancyGrid
+from nav_msgs.msg import OccupancyGrid, Path
 import rclpy.time
 from std_msgs.msg import Bool
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
@@ -65,7 +65,6 @@ def plot_graph(G, title):
     plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
     plt.close()
 
-# TODO: This returns a track which may not be closed after smoothing 
 def preprocess_track(map: OccupancyGrid):
 	"""Converts the occupancy grid into a centerline and track width data."""
 
@@ -129,17 +128,34 @@ def preprocess_track(map: OccupancyGrid):
 		path.extend(G[s][e]['pts'])
 	xy = np.array(path)*map_resolution
 
-	# Smooth the path # TODO: This is what needs to be fixed. I think i should just add a small amount to points where the distance is close to 0, just enough to placate the cubic spline
-	xy_diff  = np.diff(xy, axis=0)
-	keep     = np.any(np.abs(xy_diff) > 1e-12, axis=1)     # tolerance 1 pm
-	xy_clean = np.vstack([xy[0], xy[1:][keep]])
-	if np.allclose(xy_clean[0], xy_clean[-1]):
-		xy_clean = xy_clean[:-1]
-	seg_len = np.linalg.norm(np.diff(xy_clean, axis=0), axis=1)
+	# Smooth the path
+	seg_len = np.linalg.norm(np.diff(xy, axis=0), axis=1)
 	s = np.hstack(([0], np.cumsum(seg_len)))
-	csx = CubicSpline(s, xy_clean[:,0])
-	csy = CubicSpline(s, xy_clean[:,1])
-	s_u = np.linspace(0, s[-1], 1000)
+
+	# Identify indices where consecutive distances are zero
+	s_diff = np.diff(s)
+	nic = np.where(s_diff == 0)[0]
+
+	# Shift overlapping values slightly forward to maintain strict monotonicity
+	# Create a copy to avoid modifying the original s array
+	s_fixed = s.copy()
+
+	for i in nic:
+		# i is the index where s[i+1] == s[i]
+		# Find next increasing index j > i+1
+		j = i + 2
+		while j < len(s_fixed) and s_fixed[j] == s_fixed[i]:
+			j += 1
+		if j < len(s_fixed):
+			midpoint = (s_fixed[j] - s_fixed[i]) / 2
+			s_fixed[i+1] = s_fixed[i] + midpoint
+		else:
+			# If all following values are the same, just bump it slightly
+			s_fixed[i+1] = s_fixed[i] + 1e-6
+
+	csx = CubicSpline(s_fixed, xy[:,0])
+	csy = CubicSpline(s_fixed, xy[:,1])
+	s_u = np.linspace(0, s_fixed[-1], 1000)
 	centerline = np.c_[csx(s_u), csy(s_u)]
 
 	# get the distance on both sides of the centerline
@@ -194,6 +210,34 @@ def preprocess_track(map: OccupancyGrid):
 
 	return centerline, right_width, left_width
 
+def format_pose(row, offset=[0, 0], first=False):
+    if first:
+        offset = [-float(row[1]), -float(row[2])]
+
+    x_orig = float(row[1]) + offset[0]
+    y_orig = float(row[2]) + offset[1]
+    psi_orig = float(row[3]) # Heading of raceline in current point from -pi to +pi rad. Zero is north (along y-axis).
+
+    # rotate the raceline 90 degrees clockwise
+    x = y_orig
+    y = -x_orig
+    psi = psi_orig - np.pi / 2
+
+    # reflect aross the x axis
+    y = -y
+    psi = -psi
+
+    # translate for final fit # TODO: make this dynamic
+    x += 0.6
+    y -= 0.1
+
+    pose = PoseStamped()
+    pose.header.frame_id = 'map'
+    pose.pose.position.x = x
+    pose.pose.position.y = y
+    pose.pose.position.z = 0.0
+    pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi/2), w=np.cos(psi/2))
+
 class Nav2Intermediary(Node):
 
 	def __init__(self):
@@ -207,11 +251,20 @@ class Nav2Intermediary(Node):
 		self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.pose_graph_subscriber = self.create_subscription(MarkerArray, '/slam_toolbox/graph_visualization', self.pose_graph_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
+		self.raceline_publisher = self.create_publisher(Path, '/raceline', 20)
 
 		self.state = EXPLORATION
 		self.map: OccupancyGrid = None
 
 		self.raceline_computation_thread = threading.Thread(target=self.compute_raceline)
+		self.raceline_publisher_thread = threading.Thread(target=self.publish_raceline)
+
+	def publish_raceline(self):
+		"""Publishes the raceline to the raceline topic, with updated timestamps."""
+		while True:
+			self.raceline.header.stamp = self.get_clock().now().to_msg()
+			self.raceline_publisher.publish(self.raceline)
+			sleep(0.1)
 
 	def compute_raceline(self):
 		"""Runs in its own thread and computes the raceline, then kicks off the raceline execution stage of the race."""
@@ -246,12 +299,32 @@ class Nav2Intermediary(Node):
 		# read the output file
 		if os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
 			self.get_logger().info("Raceline file found.")
+
+			raceline = Path()
+			raceline.header.frame_id = 'map'
+
+			with open(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv', 'r') as csvfile:
+				reader = csv.reader(csvfile, delimiter=';')
+				for i in range(3):# skip the header rows
+					next(reader)
+
+				first_row = next(reader)
+				first_pose = format_pose(first_row, first=True)
+				offset = [-float(first_row[1]), -float(first_row[2])]
+				raceline.poses.append(first_pose)
+
+				for row in reader:
+					pose = format_pose(row, offset)
+					raceline.poses.append(pose)
+
+			self.raceline = raceline
+			self.raceline_publisher_thread.start()
+			self.state = RACELINE
 		else:
 			self.get_logger().error("Raceline file not found.")
-		
-		self.get_logger().info("EXITING PROGRAM...WOOHOO!")
-		self.destroy_node()
-		self.shutdown_flag = True
+			self.get_logger().info("EXITING PROGRAM")
+			self.destroy_node()
+			self.shutdown_flag = True
 
 	def gap_follow_callback(self, msg: AckermannDriveStamped):
 		"""During the exploration and raceline computation phase, passes the gap follow command to the vel_publisher. After the race line is computed, this function does nothing."""
