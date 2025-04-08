@@ -96,8 +96,7 @@ git clone https://github.com/TUMFTM/global_racetrajectory_optimization.git
 ```
 
 Make the following changes within the repository:
-- in `global_racetrajectory_optimization/requirements.txt`, remove all the versions from the package names. Then, run `pip install -r global_racetrajectory_optimization/requirements.txt`.
-    - If pip is not found, run `sudo apt-get install python3-pip`
+- in `global_racetrajectory_optimization/requirements.txt`, remove all the versions from the package names.
 - replace `global_racetrajectory_optimization/params/racecar.ini` with `src/Senior-Design-Software/f1tenth_racer/config/racecar.ini`
 - in `/home/cavrel/f1tenth_ws/global_racetrajectory_optimization/main_globaltraj.py`, make the following changes
     - Set `debug` to `False`
@@ -126,6 +125,8 @@ s = np.array(s).flatten()
 ```
 
 Then, run `pip install -r global_racetrajectory_optimization/requirements.txt` to install the dependencies.
+
+> If pip is not found, run `sudo apt-get install python3-pip`
 
 Finally, in `src/Senior-Design-Software/f1tenth_racer/f1tenth_racer/nav2_intermediary.py`, change `OPTIMIZER_PATH` to the full path of the `global_racetrajectory_optimization` repository.
 
