@@ -31,7 +31,7 @@ After this is installed, run the following command to enter the network configur
 nm-connection-editor
 ```
 
-Create a new ethernet connection named 'ROS' with the following settings:
+Configure the ethernet connection named 'ROS' with the following settings:
 
 - General settings:
     - All users may connect to this network: **checked**
@@ -53,7 +53,7 @@ Create a new ethernet connection named 'ROS' with the following settings:
     - Routes:
         - Address: **192.168.0.10**
         - Netmask: **255.255.255.255**
-        - Gateway: **Blank**
+        - Gateway: **192.168.0.15**
         - Metric: **Blank**
         - Use this connection only for resources on its network: **checked**
 - IPv6 Settings:
@@ -77,7 +77,7 @@ Install mavros by following the instructions [here](https://github.com/mavlink/m
 
 Install the F1Tenth system by following the instructions [here](https://f1tenth.readthedocs.io/en/foxy_test/getting_started/firmware/drive_workspace.html#doc-drive-workspace). If you experience issues with the command `rosdep install --from-paths src -i -y`, try simply installing the dependencies with `sudo apt-get install ros-foxy-[package_name]` for each dependency for which the rosdep definition is not found.
 
-> Be sure to follow the `Calibrating the Odometry` tutorial before running.
+> Be sure to [configure the VESC](https://f1tenth.readthedocs.io/en/foxy_test/getting_started/firmware/firmware_vesc.html) and follow the `Calibrating the Odometry` tutorial before running. 
 
 ## Setting up SLAM
 
