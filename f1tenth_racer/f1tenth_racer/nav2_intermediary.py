@@ -36,15 +36,15 @@ EXPLORATION = 0
 COMPUTING_RACELINE = 1
 RACELINE = 2
 
-OPTIMIZER_PATH = '/home/cavrel/f1tenth_ws/global_racetrajectory_optimization'
+OPTIMIZER_PATH = 'global_racetrajectory_optimization'
 DEBUG_KEY = str(time.time())
-os.makedirs(f"/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images", exist_ok=True)
+os.makedirs(f"src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images", exist_ok=True)
 
 # TODO: fix issue where graph created by sknw is has no cycles. doesn't happen much anymore since i modified the slam params to filter out far away lidar points.
 def display_binary_image(image, title):
 	plt.figure(figsize=(10, 8))
 	plt.imshow(image, cmap='gray')
-	plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
+	plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
 	plt.close()
 
 def plot_graph(G, title):
@@ -62,7 +62,7 @@ def plot_graph(G, title):
     plt.axis('equal')
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
+    plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
     plt.close()
 
 def preprocess_track(map: OccupancyGrid):
@@ -87,7 +87,7 @@ def preprocess_track(map: OccupancyGrid):
 	binary_space[gray_space > 127] = 1
 
 	### DEBUGGING CODE ###
-	np.save(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/track_raw.npy', binary_space)
+	np.save(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/track_raw.npy', binary_space)
 	### DEBUGGING CODE ###
 
 	# eliminate holes and noise
@@ -204,7 +204,7 @@ def preprocess_track(map: OccupancyGrid):
 		plt.arrow(p1x, p1y, right_vector[0], right_vector[1], head_width=0.1, head_length=0.1, color='red')
 		plt.arrow(p1x, p1y, left_vector[0], left_vector[1], head_width=0.1, head_length=0.1, color='blue')
 
-	plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
+	plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
 	plt.close()
 	### DEBUGGING CODE ###
 
@@ -287,7 +287,7 @@ class Nav2Intermediary(Node):
 				])
 
 		### DEBUGGING CODE ###
-		os.system(f"cp {OPTIMIZER_PATH}/inputs/tracks/hec_track.csv /home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/hec_track.csv")
+		os.system(f"cp {OPTIMIZER_PATH}/inputs/tracks/hec_track.csv src/Senior-Design-Software/debug_data/{DEBUG_KEY}/hec_track.csv")
 		### DEBUGGING CODE ###
 
 		self.get_logger().info("Track data written to csv. Running optimization.")
@@ -375,7 +375,7 @@ class Nav2Intermediary(Node):
 			plt.title(f'Pose Graph Markers - {len(marker_array)} points')
 			plt.xlabel('X Position (m)')
 			plt.ylabel('Y Position (m)')
-			plt.savefig(f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
+			plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
 			plt.close()
 			### DEBUGGING CODE ###
 
