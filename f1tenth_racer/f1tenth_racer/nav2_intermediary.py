@@ -94,17 +94,17 @@ def preprocess_track(map: OccupancyGrid):
 	track = binary_opening(binary_space, iterations=2)
 	track = binary_closing(track, iterations=2)
 
-	display_binary_image(track, 'track')
+	# display_binary_image(track, 'track')
 
 	# get a 1 pixel wide skeleton of the centerline
 	# D = distance_transform_edt(track)
 	skel = skeletonize(track)
 
-	display_binary_image(skel, 'skel')
+	# display_binary_image(skel, 'skel')
 
 	# convert that to a path graph. We also need to check for spurious edges that are not part of the track, and remove them.
 	G = sknw.build_sknw(skel)
-	plot_graph(G, 'graph')
+	# plot_graph(G, 'graph')
 
 	leaf_nodes_exist = True
 	while leaf_nodes_exist: # make repeated iterations through the graph until there are either no leaf nodes or only 1 node left
@@ -120,7 +120,7 @@ def preprocess_track(map: OccupancyGrid):
 		for node in nodes_to_remove:
 			G.remove_node(node)
 
-	plot_graph(G, 'graph_no_spurs')
+	# plot_graph(G, 'graph_no_spurs')
 
 	# extract the ordered points from the graph
 	path = []
@@ -179,66 +179,38 @@ def preprocess_track(map: OccupancyGrid):
 		left_width.append(outer_distance[int(scaled_point[0]), int(scaled_point[1])]*map_resolution)
 
 	### DEBUGGING CODE ###
-	plt.figure(figsize=(10, 8))
-	plt.plot(centerline[:, 0], centerline[:, 1], 'b-', linewidth=2, label='Centerline')
-	plt.scatter(xy[:, 0], xy[:, 1], c='r', s=10, alpha=0.5, label='Original Points')
-	plt.title('Track Centerline')
-	plt.xlabel('X (meters)')
-	plt.ylabel('Y (meters)')
-	plt.legend()
-	plt.axis('equal')
-	plt.grid(True)
+	# plt.figure(figsize=(10, 8))
+	# plt.plot(centerline[:, 0], centerline[:, 1], 'b-', linewidth=2, label='Centerline')
+	# plt.scatter(xy[:, 0], xy[:, 1], c='r', s=10, alpha=0.5, label='Original Points')
+	# plt.title('Track Centerline')
+	# plt.xlabel('X (meters)')
+	# plt.ylabel('Y (meters)')
+	# plt.legend()
+	# plt.axis('equal')
+	# plt.grid(True)
 
-	for i in range(len(centerline[:-1])):
-		_range = centerline[i:i+2]
+	# for i in range(len(centerline[:-1])):
+	# 	_range = centerline[i:i+2]
 
-		p1x, p1y = _range[0]
-		p2x, p2y = _range[1]
+	# 	p1x, p1y = _range[0]
+	# 	p2x, p2y = _range[1]
 
-		right_vector = np.array((p2y - p1y, p1x - p2x))
-		left_vector = np.array((p1y - p2y, p2x - p1x))
+	# 	right_vector = np.array((p2y - p1y, p1x - p2x))
+	# 	left_vector = np.array((p1y - p2y, p2x - p1x))
 
-		right_vector = (right_vector / np.linalg.norm(right_vector)) * right_width[i]
-		left_vector = (left_vector / np.linalg.norm(left_vector)) * left_width[i]
+	# 	right_vector = (right_vector / np.linalg.norm(right_vector)) * right_width[i]
+	# 	left_vector = (left_vector / np.linalg.norm(left_vector)) * left_width[i]
 
-		plt.arrow(p1x, p1y, right_vector[0], right_vector[1], head_width=0.1, head_length=0.1, color='red')
-		plt.arrow(p1x, p1y, left_vector[0], left_vector[1], head_width=0.1, head_length=0.1, color='blue')
+	# 	plt.arrow(p1x, p1y, right_vector[0], right_vector[1], head_width=0.1, head_length=0.1, color='red')
+	# 	plt.arrow(p1x, p1y, left_vector[0], left_vector[1], head_width=0.1, head_length=0.1, color='blue')
 
-	plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
-	plt.close()
+	# plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
+	# plt.close()
 	### DEBUGGING CODE ###
 
 	centroid_meters = np.array([centroid.y, centroid.x])*map_resolution + np.array([map.info.origin.position.x, map.info.origin.position.y])
 
 	return centerline, right_width, left_width, centroid_meters
-
-# def format_pose(row, coordinate_offset, raceline_offset, angle_offset):
-
-#     x_orig = float(row[1]) + coordinate_offset[0]
-#     y_orig = float(row[2]) + coordinate_offset[1]
-#     psi_orig = float(row[3]) # Heading of raceline in current point from -pi to +pi rad. Zero is north (along y-axis).
-
-#     # rotate the raceline 90 degrees clockwise
-#     x = y_orig
-#     y = -x_orig
-#     psi = psi_orig - np.pi / 2
-
-#     # reflect aross the x axis
-#     y = -y
-#     psi = -psi
-
-#     # translate for final fit
-#     x += raceline_offset[0]
-#     y += raceline_offset[1]
-
-#     pose = PoseStamped()
-#     pose.header.frame_id = 'map'
-#     pose.pose.position.x = x
-#     pose.pose.position.y = y
-#     pose.pose.position.z = 0.0
-#     pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi/2), w=np.cos(psi/2))
-    
-#     return pose
 
 class Nav2Intermediary(Node):
 
@@ -338,6 +310,12 @@ class Nav2Intermediary(Node):
 				diff = track_centroid - raceline_centroid
 				xy += diff
 
+				# throw in some more flips for good measure
+				center_x = track_centroid[0]
+				center_y = track_centroid[1]
+				xy[:, 0] = 2.0 * center_x - xy[:, 0]
+				xy[:, 1] = 2.0 * center_y - xy[:, 1]
+
 				for i in range(len(xy)):
 					pose = PoseStamped()
 					pose.header.frame_id = 'map'
@@ -394,16 +372,16 @@ class Nav2Intermediary(Node):
 				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
 
 			### DEBUGGING CODE ###
-			plt.figure(figsize=(10, 10))
-			# Create a colormap that shows the order of markers (from blue to red)
-			colors = plt.cm.viridis(np.linspace(0, 1, len(marker_array)))
-			plt.scatter(marker_array[:, 0], marker_array[:, 1], s=10, c=colors)
-			plt.colorbar(label='Marker Order')
-			plt.title(f'Pose Graph Markers - {len(marker_array)} points')
-			plt.xlabel('X Position (m)')
-			plt.ylabel('Y Position (m)')
-			plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
-			plt.close()
+			# plt.figure(figsize=(10, 10))
+			# # Create a colormap that shows the order of markers (from blue to red)
+			# colors = plt.cm.viridis(np.linspace(0, 1, len(marker_array)))
+			# plt.scatter(marker_array[:, 0], marker_array[:, 1], s=10, c=colors)
+			# plt.colorbar(label='Marker Order')
+			# plt.title(f'Pose Graph Markers - {len(marker_array)} points')
+			# plt.xlabel('X Position (m)')
+			# plt.ylabel('Y Position (m)')
+			# plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
+			# plt.close()
 			### DEBUGGING CODE ###
 
 			tree = cKDTree(marker_array)
