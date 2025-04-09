@@ -208,35 +208,37 @@ def preprocess_track(map: OccupancyGrid):
 	plt.close()
 	### DEBUGGING CODE ###
 
-	return centerline, right_width, left_width
+	centroid_meters = np.array([centroid.y, centroid.x])*map_resolution + np.array([map.info.origin.position.x, map.info.origin.position.y])
 
-def format_pose(row, coordinate_offset, raceline_offset, angle_offset):
+	return centerline, right_width, left_width, centroid_meters
 
-    x_orig = float(row[1]) + coordinate_offset[0]
-    y_orig = float(row[2]) + coordinate_offset[1]
-    psi_orig = float(row[3]) # Heading of raceline in current point from -pi to +pi rad. Zero is north (along y-axis).
+# def format_pose(row, coordinate_offset, raceline_offset, angle_offset):
 
-    # rotate the raceline 90 degrees clockwise
-    x = y_orig
-    y = -x_orig
-    psi = psi_orig - np.pi / 2
+#     x_orig = float(row[1]) + coordinate_offset[0]
+#     y_orig = float(row[2]) + coordinate_offset[1]
+#     psi_orig = float(row[3]) # Heading of raceline in current point from -pi to +pi rad. Zero is north (along y-axis).
 
-    # reflect aross the x axis
-    y = -y
-    psi = -psi
+#     # rotate the raceline 90 degrees clockwise
+#     x = y_orig
+#     y = -x_orig
+#     psi = psi_orig - np.pi / 2
 
-    # translate for final fit
-    x += raceline_offset[0]
-    y += raceline_offset[1]
+#     # reflect aross the x axis
+#     y = -y
+#     psi = -psi
 
-    pose = PoseStamped()
-    pose.header.frame_id = 'map'
-    pose.pose.position.x = x
-    pose.pose.position.y = y
-    pose.pose.position.z = 0.0
-    pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi/2), w=np.cos(psi/2))
+#     # translate for final fit
+#     x += raceline_offset[0]
+#     y += raceline_offset[1]
+
+#     pose = PoseStamped()
+#     pose.header.frame_id = 'map'
+#     pose.pose.position.x = x
+#     pose.pose.position.y = y
+#     pose.pose.position.z = 0.0
+#     pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi/2), w=np.cos(psi/2))
     
-    return pose
+#     return pose
 
 class Nav2Intermediary(Node):
 
@@ -270,7 +272,7 @@ class Nav2Intermediary(Node):
 		"""Runs in its own thread and computes the raceline, then kicks off the raceline execution stage of the race."""
 
 		# preprocess the occupancy grid
-		centerline, right_width, left_width = preprocess_track(self.map)
+		centerline, right_width, left_width, track_centroid = preprocess_track(self.map)
 
 		self.get_logger().info("Track preprocessed. Writing to csv.")
 
@@ -309,16 +311,41 @@ class Nav2Intermediary(Node):
 				for i in range(3):# skip the header rows
 					next(reader)
 
-				first_row = next(reader)
-
-				coordinate_offset = np.array([-float(first_row[1]), -float(first_row[2])]) # offset from the optimizer frame to the map frame
-				raceline_offset = np.array([float(first_row[1]) + self.map.info.origin.position.x, float(first_row[2]) + self.map.info.origin.position.y]) # offset between the centerline and the raceline
-
-				first_pose = format_pose(first_row, coordinate_offset, raceline_offset)
-				raceline.poses.append(first_pose)
+				x_orig = []
+				y_orig = []
+				psi_orig = []
 
 				for row in reader:
-					pose = format_pose(row, coordinate_offset, raceline_offset)
+					x_orig.append(float(row[1]) + self.map.info.origin.position.x)
+					y_orig.append(float(row[2]) + self.map.info.origin.position.y)
+					psi_orig.append(float(row[3]))
+
+				x_orig = np.array(x_orig)
+				y_orig = np.array(y_orig)
+				psi_orig = np.array(psi_orig)
+
+				# rotate the raceline 90 degrees clockwise to align with the track
+				x = y_orig
+				y = -x_orig
+				psi = psi_orig - np.pi / 2
+				xy = np.c_[x, y]
+
+				# now calculate the centroid of the raceline
+				raceline_polygon = Polygon(xy)
+				raceline_centroid = np.array([raceline_polygon.centroid.x, raceline_polygon.centroid.y])
+
+				# now move the raceline to the track centroid
+				diff = track_centroid - raceline_centroid
+				xy += diff
+
+				for i in range(len(xy)):
+					pose = PoseStamped()
+					pose.header.frame_id = 'map'
+					pose.pose.position.x = xy[i, 0]
+					pose.pose.position.y = xy[i, 1]
+					pose.pose.position.z = 0.0
+					pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi[i]/2), w=np.cos(psi[i]/2))
+
 					raceline.poses.append(pose)
 
 			self.raceline = raceline
