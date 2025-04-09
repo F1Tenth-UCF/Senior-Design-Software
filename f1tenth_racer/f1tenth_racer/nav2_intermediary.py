@@ -10,6 +10,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
 from rclpy.action import ActionClient
 from nav2_msgs.action import FollowPath
+from tf2_ros import Buffer, TransformListener
 import threading
 import matplotlib.pyplot as plt
 import cv2
@@ -162,7 +163,6 @@ class Nav2Intermediary(Node):
 		# class variables
 		self.state = EXPLORATION
 		self.map: OccupancyGrid = None
-		self.pose: PoseWithCovarianceStamped = None
 		self.raceline: Path = None
 
 		# processes used for controlling the car
@@ -177,7 +177,8 @@ class Nav2Intermediary(Node):
 		
 		# topics on which we receive data to store at a class level for use by other processes within this node
 		self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-		self.pose_subscriber = self.create_subscription(PoseWithCovarianceStamped, '/pose', self.pose_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.tf_buffer = Buffer()
+		self.tf_listener = TransformListener(self.tf_buffer, self)
 
 		# processes used for progressing the state of the race
 		self.pose_graph_subscriber = self.create_subscription(MarkerArray, '/slam_toolbox/graph_visualization', self.pose_graph_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
@@ -200,37 +201,26 @@ class Nav2Intermediary(Node):
 		"""During the raceline phase, translates the nav2 command to the AckermannDriveStamped message that the VESC expects and publishes it."""
 		
 		if self.state == RACELINE:
+
+			self.get_logger().info(f"Nav2 command received: {msg.linear.x}, {msg.angular.z}")
+
 			vel_msg = AckermannDriveStamped()
 			vel_msg.drive.steering_angle = msg.angular.z
 			vel_msg.drive.speed = msg.linear.x
-			
-			# Check if this is the first non-zero velocity
-			if not self.first_nonzero_published and vel_msg.drive.speed > 0:
-				self.first_nonzero_published = True
-				self.get_logger().info("First non-zero velocity published. Starting odometry error recording.")
 				
 			self.vel_publisher.publish(vel_msg)
-
-	def follow_path_callback(self, future):
-		"""Callback for the follow path action server."""
-
-		goal_handle = future.result()
-		if not goal_handle.accepted:
-			self.get_logger().warn("FollowPath goal was rejected!")
-			return
-
-		self.get_logger().info("FollowPath goal accepted, waiting for result...")
-		result_future = goal_handle.get_result_async()
-		result_future.add_done_callback(self.get_result_callback)
 
 	def publish_updated_raceline(self):
 		"""Publishes the updated raceline to the /raceline topic."""
 
 		if self.state == RACELINE:
 
+			# get the current position of the car in the map frame
+			transform = self.tf_buffer.lookup_transform('map', 'base_link', rclpy.time.Time())
+			car_pose = np.array([transform.transform.translation.x, transform.transform.translation.y])
+
 			# find the index of the raceline closest to the car
 			poses = np.array([[p.pose.position.x, p.pose.position.y] for p in self.raceline.poses])
-			car_pose = np.array([self.pose.pose.pose.position.x, self.pose.pose.pose.position.y])
 			distances = np.linalg.norm(poses - car_pose, axis=1)
 			closest_index = np.argmin(distances)
 
@@ -245,7 +235,7 @@ class Nav2Intermediary(Node):
 			goal.controller_id = 'FollowPath'
 
 			# send the goal to the action server, and don't wait for a result
-			self.follow_path_client.send_goal_async(goal, feedback_callback=self.follow_path_callback)
+			self.follow_path_client.send_goal_async(goal)
 
 	# VVV Sensor callback functions VVV
 
@@ -254,12 +244,6 @@ class Nav2Intermediary(Node):
 
 		if self.state == EXPLORATION: # this ensures that the map isn't updates while the raceline is being computed
 			self.map = msg
-
-	def pose_callback(self, msg: PoseWithCovarianceStamped):
-		"""Stores the latest pose, which is used to determine where to slice the raceline."""
-
-		if self.state == RACELINE:
-			self.initial_pose = msg.pose.pose.position
 
 	# VVV State Management Functions VVV
 
