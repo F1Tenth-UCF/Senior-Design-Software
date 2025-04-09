@@ -404,7 +404,7 @@ class FollowTheGapNode(Node):
             drive_msg.drive.steering_angle = final_heading_angle
 
             self.drive_pub.publish(drive_msg)
-            self.get_logger().info(f"Publishing steering={final_heading_angle:.3f}, speed=0.35")
+            # self.get_logger().info(f"Publishing steering={final_heading_angle:.3f}, speed=0.35")
 
         except NoGapFoundException as e:
             self.get_logger().warn(f"No gap found: {e}")

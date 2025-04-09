@@ -116,6 +116,7 @@ Make the following changes within the repository:
         ```
 
     - set `set_new_start` to `True`
+    - set `flip_imp_track` to `True`
     - set `new_start` to `np.array([args.x, args.y])`
 
 Then run `pip show trajectory_planning_helpers`. Take the location displayed as `TRAJ_HELP_PATH`. Navigate to `TRAJ_HELP_PATH/trajectory_planning_helpers/spline_approximation.py` and within the `dist_to_p` function, add the following line immediately before the return statement:
@@ -144,13 +145,10 @@ In `src/f1tenth_system/f1tenth_stack/config/joy_teleop.yaml`, comment out `devic
 
 # Running the car
 
-Run the following commands to start the full stack (lidar + F1Tenth system + SLAM + NAV2):
+Run the commands in `shell_setup.sh` to set up the shell, then run the command below to start the race.
 
 ```bash
-export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-export ROS_DOMAIN_ID=5
 ros2 launch f1tenth_racer f1tenth_sys_stacklaunch.py
-# ros2 run f1tenth_racer pose_broadcaster_2
 ros2 run f1tenth_racer wall_follower
 ```
 

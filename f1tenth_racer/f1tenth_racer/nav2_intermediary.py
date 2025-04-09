@@ -1,5 +1,5 @@
 import rclpy
-from geometry_msgs.msg import Twist, Quaternion, PoseStamped
+from geometry_msgs.msg import Twist, Quaternion, PoseStamped, PoseWithCovarianceStamped
 from visualization_msgs.msg import MarkerArray
 from ackermann_msgs.msg import AckermannDriveStamped
 from nav_msgs.msg import OccupancyGrid, Path
@@ -8,6 +8,8 @@ from std_msgs.msg import Bool
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.node import Node
 from rclpy.qos import QoSPresetProfiles
+from rclpy.action import ActionClient
+from nav2_msgs.action import FollowPath
 import threading
 import matplotlib.pyplot as plt
 import cv2
@@ -41,30 +43,6 @@ DEBUG_KEY = str(time.time())
 os.makedirs(f"src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images", exist_ok=True)
 
 # TODO: fix issue where graph created by sknw is has no cycles. doesn't happen much anymore since i modified the slam params to filter out far away lidar points.
-def display_binary_image(image, title):
-	plt.figure(figsize=(10, 8))
-	plt.imshow(image, cmap='gray')
-	plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
-	plt.close()
-
-def plot_graph(G, title):
-    plt.figure(figsize=(10, 8))
-
-    # Plot the graph nodes
-    node_pos = {i: (G.nodes[i]['o'][1], G.nodes[i]['o'][0]) for i in G.nodes()}
-    nx.draw_networkx_nodes(G, pos=node_pos, node_size=20, node_color='red')
-
-    # Plot the graph edges
-    for (s, e) in G.edges():
-        ps = G[s][e]['pts']
-        plt.plot(ps[:, 1], ps[:, 0], 'green')
-    plt.title('Skeleton Graph Visualization')
-    plt.axis('equal')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
-    plt.close()
-
 def preprocess_track(map: OccupancyGrid):
 	"""Converts the occupancy grid into a centerline and track width data."""
 
@@ -97,14 +75,10 @@ def preprocess_track(map: OccupancyGrid):
 	# display_binary_image(track, 'track')
 
 	# get a 1 pixel wide skeleton of the centerline
-	# D = distance_transform_edt(track)
 	skel = skeletonize(track)
-
-	# display_binary_image(skel, 'skel')
 
 	# convert that to a path graph. We also need to check for spurious edges that are not part of the track, and remove them.
 	G = sknw.build_sknw(skel)
-	# plot_graph(G, 'graph')
 
 	leaf_nodes_exist = True
 	while leaf_nodes_exist: # make repeated iterations through the graph until there are either no leaf nodes or only 1 node left
@@ -119,8 +93,6 @@ def preprocess_track(map: OccupancyGrid):
 
 		for node in nodes_to_remove:
 			G.remove_node(node)
-
-	# plot_graph(G, 'graph_no_spurs')
 
 	# extract the ordered points from the graph
 	path = []
@@ -178,36 +150,6 @@ def preprocess_track(map: OccupancyGrid):
 		right_width.append(inner_distance[int(scaled_point[0]), int(scaled_point[1])]*map_resolution)
 		left_width.append(outer_distance[int(scaled_point[0]), int(scaled_point[1])]*map_resolution)
 
-	### DEBUGGING CODE ###
-	# plt.figure(figsize=(10, 8))
-	# plt.plot(centerline[:, 0], centerline[:, 1], 'b-', linewidth=2, label='Centerline')
-	# plt.scatter(xy[:, 0], xy[:, 1], c='r', s=10, alpha=0.5, label='Original Points')
-	# plt.title('Track Centerline')
-	# plt.xlabel('X (meters)')
-	# plt.ylabel('Y (meters)')
-	# plt.legend()
-	# plt.axis('equal')
-	# plt.grid(True)
-
-	# for i in range(len(centerline[:-1])):
-	# 	_range = centerline[i:i+2]
-
-	# 	p1x, p1y = _range[0]
-	# 	p2x, p2y = _range[1]
-
-	# 	right_vector = np.array((p2y - p1y, p1x - p2x))
-	# 	left_vector = np.array((p1y - p2y, p2x - p1x))
-
-	# 	right_vector = (right_vector / np.linalg.norm(right_vector)) * right_width[i]
-	# 	left_vector = (left_vector / np.linalg.norm(left_vector)) * left_width[i]
-
-	# 	plt.arrow(p1x, p1y, right_vector[0], right_vector[1], head_width=0.1, head_length=0.1, color='red')
-	# 	plt.arrow(p1x, p1y, left_vector[0], left_vector[1], head_width=0.1, head_length=0.1, color='blue')
-
-	# plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
-	# plt.close()
-	### DEBUGGING CODE ###
-
 	centroid_meters = np.array([centroid.y, centroid.x])*map_resolution + np.array([map.info.origin.position.x, map.info.origin.position.y])
 
 	return centerline, right_width, left_width, centroid_meters
@@ -217,28 +159,140 @@ class Nav2Intermediary(Node):
 	def __init__(self):
 		super().__init__('nav2_intermediary')
 
-		# pubsub setup
-		self.nav2_velo_subscriber = self.create_subscription(Twist, '/cmd_vel', self.cmd_vel_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-		self.gap_follow_subscriber = self.create_subscription(AckermannDriveStamped, '/wall_follower/cmd_vel', self.gap_follow_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-		
-		self.killswitch_subscriber = self.create_subscription(Bool, '/f1tenth_racer/killswitch', self.killswitch_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-		self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-		self.pose_graph_subscriber = self.create_subscription(MarkerArray, '/slam_toolbox/graph_visualization', self.pose_graph_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
-		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
-		self.raceline_publisher = self.create_publisher(Path, '/raceline', 20)
-
+		# class variables
 		self.state = EXPLORATION
 		self.map: OccupancyGrid = None
+		self.pose: PoseWithCovarianceStamped = None
+		self.raceline: Path = None
 
+		# processes used for controlling the car
+		self.nav2_velo_subscriber = self.create_subscription(Twist, '/cmd_vel', self.nav2_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.gap_follow_subscriber = self.create_subscription(AckermannDriveStamped, '/wall_follower/cmd_vel', self.gap_follow_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.updated_raceline_publisher = self.create_timer(1.0, self.publish_updated_raceline)
+		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
+		self.follow_path_client = ActionClient(self, FollowPath, 'follow_path')
+		self.get_logger().info("Waiting for FollowPath action server...")
+		self.follow_path_client.wait_for_server()
+		self.get_logger().info("FollowPath action server is up!")
+		
+		# topics on which we receive data to store at a class level for use by other processes within this node
+		self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.pose_subscriber = self.create_subscription(PoseWithCovarianceStamped, '/pose', self.pose_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+
+		# processes used for progressing the state of the race
+		self.pose_graph_subscriber = self.create_subscription(MarkerArray, '/slam_toolbox/graph_visualization', self.pose_graph_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.raceline_computation_thread = threading.Thread(target=self.compute_raceline)
-		self.raceline_publisher_thread = threading.Thread(target=self.publish_raceline)
 
-	def publish_raceline(self):
-		"""Publishes the raceline to the raceline topic, with updated timestamps."""
-		while True:
-			self.raceline.header.stamp = self.get_clock().now().to_msg()
-			self.raceline_publisher.publish(self.raceline)
-			sleep(0.1)
+		# misc processes
+		self.killswitch_subscriber = self.create_subscription(Bool, '/f1tenth_racer/killswitch', self.killswitch_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
+		self.raceline_publisher = self.create_publisher(Path, '/raceline', 20)
+		self.raceline_publisher_thread = threading.Thread(target=self.publish_raceline)
+	
+	# VVV Car control functions VVV
+
+	def gap_follow_callback(self, msg: AckermannDriveStamped):
+		"""During the exploration and raceline computation phase, passes the gap follow command to the vel_publisher. After the race line is computed, this function does nothing."""
+
+		if self.state < RACELINE:
+			self.vel_publisher.publish(msg)
+
+	def nav2_callback(self, msg: Twist):
+		"""During the raceline phase, translates the nav2 command to the AckermannDriveStamped message that the VESC expects and publishes it."""
+		
+		if self.state == RACELINE:
+			vel_msg = AckermannDriveStamped()
+			vel_msg.drive.steering_angle = msg.angular.z
+			vel_msg.drive.speed = msg.linear.x
+			
+			# Check if this is the first non-zero velocity
+			if not self.first_nonzero_published and vel_msg.drive.speed > 0:
+				self.first_nonzero_published = True
+				self.get_logger().info("First non-zero velocity published. Starting odometry error recording.")
+				
+			self.vel_publisher.publish(vel_msg)
+
+	def follow_path_callback(self, future):
+		"""Callback for the follow path action server."""
+
+		goal_handle = future.result()
+		if not goal_handle.accepted:
+			self.get_logger().warn("FollowPath goal was rejected!")
+			return
+
+		self.get_logger().info("FollowPath goal accepted, waiting for result...")
+		result_future = goal_handle.get_result_async()
+		result_future.add_done_callback(self.get_result_callback)
+
+	def publish_updated_raceline(self):
+		"""Publishes the updated raceline to the /raceline topic."""
+
+		if self.state == RACELINE:
+
+			# find the index of the raceline closest to the car
+			poses = np.array([[p.pose.position.x, p.pose.position.y] for p in self.raceline.poses])
+			car_pose = np.array([self.pose.pose.pose.position.x, self.pose.pose.pose.position.y])
+			distances = np.linalg.norm(poses - car_pose, axis=1)
+			closest_index = np.argmin(distances)
+
+			# create a new path message which is a full loop starting from the closest point on the raceline to the car
+			sliced_raceline_msg = Path()
+			sliced_raceline_msg.header.frame_id = 'map'
+			sliced_raceline_msg.poses = self.raceline.poses[closest_index:] + self.raceline.poses[:closest_index]
+
+			# create a follow path goal
+			goal = FollowPath.Goal()
+			goal.path = sliced_raceline_msg
+			goal.controller_id = 'FollowPath'
+
+			# send the goal to the action server, and don't wait for a result
+			self.follow_path_client.send_goal_async(goal, feedback_callback=self.follow_path_callback)
+
+	# VVV Sensor callback functions VVV
+
+	def map_callback(self, msg: OccupancyGrid):
+		"""Stores the latest map. After the raceline computation begins, this function does nothing."""
+
+		if self.state == EXPLORATION: # this ensures that the map isn't updates while the raceline is being computed
+			self.map = msg
+
+	def pose_callback(self, msg: PoseWithCovarianceStamped):
+		"""Stores the latest pose, which is used to determine where to slice the raceline."""
+
+		if self.state == RACELINE:
+			self.initial_pose = msg.pose.pose.position
+
+	# VVV State Management Functions VVV
+
+	# TODO: if our loop closure screws up, we need to reset the pose graph.
+	def pose_graph_callback(self, msg: MarkerArray):
+		"""During the exploraiton phase, checks for loop closure. During raceline computation and execution, does nothing."""
+
+		if self.state == EXPLORATION:
+			# order the markers by their id, ensuring they're in the order they were added to the graph
+			marker_array = np.zeros((len(msg.markers), 2))
+			for marker in msg.markers:
+				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
+
+			tree = cKDTree(marker_array)
+
+			# for each marker, we find the indices of the markers within 0.1m. If any of these markers is more than 10 scans later, we have a loop closure.
+			closures = []
+			for i in range(len(marker_array)):
+				idxs = tree.query_ball_point(marker_array[i, :], 0.1)
+				
+				for j in idxs:
+					if j <= i + 10:
+						continue
+
+					closures.append(j)
+
+			self.get_logger().info(f"Loop closure detected at {len(closures)} points.")
+
+			# if there are loop closures, we change the mode to raceline computation and start the thread. This thread will run asynchronously to compute the raceline, and switch off exploration mode when complete.
+			if len(closures) > 0:
+				self.get_logger().info("Loop closure detected. Switching to raceline computation.")
+				self.state = COMPUTING_RACELINE
+				self.raceline_computation_thread.start()
 
 	def compute_raceline(self):
 		"""Runs in its own thread and computes the raceline, then kicks off the raceline execution stage of the race."""
@@ -313,8 +367,9 @@ class Nav2Intermediary(Node):
 				# throw in some more flips for good measure
 				center_x = track_centroid[0]
 				center_y = track_centroid[1]
-				xy[:, 0] = 2.0 * center_x - xy[:, 0]
-				xy[:, 1] = 2.0 * center_y - xy[:, 1]
+				xy[:, 0] = 2.0 * center_x - xy[:, 0] # mirror across x
+				xy[:, 1] = 2.0 * center_y - xy[:, 1] # mirror across y
+				psi += np.pi # add 180 degrees to the orientation to keep in line with the track
 
 				for i in range(len(xy)):
 					pose = PoseStamped()
@@ -327,7 +382,7 @@ class Nav2Intermediary(Node):
 					raceline.poses.append(pose)
 
 			self.raceline = raceline
-			self.raceline_publisher_thread.start()
+			self.raceline_publisher_thread.start() # used for visualization
 			self.state = RACELINE
 		else:
 			self.get_logger().error("Raceline file not found.")
@@ -335,75 +390,7 @@ class Nav2Intermediary(Node):
 			self.destroy_node()
 			self.shutdown_flag = True
 
-	def gap_follow_callback(self, msg: AckermannDriveStamped):
-		"""During the exploration and raceline computation phase, passes the gap follow command to the vel_publisher. After the race line is computed, this function does nothing."""
-
-		if self.state < RACELINE:
-			self.vel_publisher.publish(msg)
-
-	def cmd_vel_callback(self, msg: Twist):
-		"""During the raceline phase, passes the nav2 command to the vel_publisher."""
-		
-		if self.state == RACELINE:
-			vel_msg = AckermannDriveStamped()
-			vel_msg.drive.steering_angle = msg.angular.z
-			vel_msg.drive.speed = msg.linear.x
-			
-			# Check if this is the first non-zero velocity
-			if not self.first_nonzero_published and vel_msg.drive.speed > 0:
-				self.first_nonzero_published = True
-				self.get_logger().info("First non-zero velocity published. Starting odometry error recording.")
-				
-			self.vel_publisher.publish(vel_msg)
-
-	def map_callback(self, msg: OccupancyGrid):
-		"""Stores the latest map"""
-
-		if self.state == EXPLORATION: # this ensures that the map isn't updates while the raceline is being computed
-			self.map = msg
-
-	def pose_graph_callback(self, msg: MarkerArray):
-		"""During the exploraiton phase, checks for loop closure. During raceline computation and execution, does nothing."""
-
-		if self.state == EXPLORATION:
-			# order the markers by their id, ensuring they're in the order they were added to the graph
-			marker_array = np.zeros((len(msg.markers), 2))
-			for marker in msg.markers:
-				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
-
-			### DEBUGGING CODE ###
-			# plt.figure(figsize=(10, 10))
-			# # Create a colormap that shows the order of markers (from blue to red)
-			# colors = plt.cm.viridis(np.linspace(0, 1, len(marker_array)))
-			# plt.scatter(marker_array[:, 0], marker_array[:, 1], s=10, c=colors)
-			# plt.colorbar(label='Marker Order')
-			# plt.title(f'Pose Graph Markers - {len(marker_array)} points')
-			# plt.xlabel('X Position (m)')
-			# plt.ylabel('Y Position (m)')
-			# plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
-			# plt.close()
-			### DEBUGGING CODE ###
-
-			tree = cKDTree(marker_array)
-
-			# for each marker, we find the indices of the markers within 0.1m. If any of these markers is more than 10 scans later, we have a loop closure.
-			closures = []
-			for i in range(len(marker_array)):
-				idxs = tree.query_ball_point(marker_array[i, :], 0.1)
-				
-				for j in idxs:
-					if j <= i + 10:
-						continue
-
-					closures.append(j)
-
-			self.get_logger().info(f"Loop closure detected at {len(closures)} points.")
-
-			# if there are loop closures, we change the mode to raceline computation and start the thread. This thread will run asynchronously to compute the raceline, and switch off exploration mode when complete.
-			if len(closures) > 0:
-				self.get_logger().info("Loop closure detected. Switching to raceline computation.")
-				self.state = COMPUTING_RACELINE
-				self.raceline_computation_thread.start()
+	# VVV Misc functions VVV
 
 	def killswitch_callback(self, msg):
 		"""Callback for the killswitch topic."""
@@ -411,6 +398,14 @@ class Nav2Intermediary(Node):
 			self.get_logger().info("Car is shut down.")
 			self.destroy_node()
 			self.shutdown_flag = True
+
+	def publish_raceline(self):
+		"""Once this thread is activated, it will continuously publish the raceline for visualization purposes."""
+		
+		while True:
+			self.raceline.header.stamp = self.get_clock().now().to_msg()
+			self.raceline_publisher.publish(self.raceline)
+			sleep(0.1)
 
 def main(args=None):
     rclpy.init(args=args)

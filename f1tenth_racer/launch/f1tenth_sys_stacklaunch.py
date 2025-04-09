@@ -147,6 +147,14 @@ def generate_launch_description():
         cmd=['ros2', 'launch', 'slam_toolbox', 'online_async_launch.py', 'use_sim_time:=False', 'params_file:=' + format_share_path('config/slam_params.yaml')],
     )
 
+    # wall following
+    wall_following_node = Node(
+        package='f1tenth_racer',
+        executable='wall_follower',
+        name='wall_follower',
+        output='screen'
+    )
+
     # nav2
     nav2_node = ExecuteProcess(
         cmd=['ros2', 'launch', 'nav2_bringup', 'navigation_launch.py', 'params_file:=' + format_share_path('config/nav2_params.yaml')],
@@ -200,7 +208,7 @@ def generate_launch_description():
     ld.add_action(RegisterEventHandler(
             OnProcessExit(
                 target_action=odom_checker, # wait for fcu port to be open
-                on_exit=[nav2_intermediary_node] #nav2_node # start mavros and start listening for odom
+                on_exit=[nav2_intermediary_node, nav2_node, wall_following_node] #nav2_node # start mavros and start listening for odom
             )
         ))
 
