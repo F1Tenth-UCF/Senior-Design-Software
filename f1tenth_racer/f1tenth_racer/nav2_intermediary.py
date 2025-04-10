@@ -1,5 +1,5 @@
 import rclpy
-from geometry_msgs.msg import Twist, Quaternion, PoseStamped, PoseWithCovarianceStamped
+from geometry_msgs.msg import Twist, Quaternion, PoseStamped, PoseWithCovarianceStamped, TwistStamped, PoseArray
 from visualization_msgs.msg import MarkerArray
 from ackermann_msgs.msg import AckermannDriveStamped
 from nav_msgs.msg import OccupancyGrid, Path
@@ -188,7 +188,8 @@ class Nav2Intermediary(Node):
 		self.killswitch_subscriber = self.create_subscription(Bool, '/f1tenth_racer/killswitch', self.killswitch_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.raceline_publisher = self.create_publisher(Path, '/raceline', 20)
 		self.raceline_publisher_thread = threading.Thread(target=self.publish_raceline)
-	
+		self.pose_array_publisher = self.create_publisher(PoseArray, '/raceline_poses', 20)
+		
 	# VVV Car control functions VVV
 
 	def gap_follow_callback(self, msg: AckermannDriveStamped):
@@ -227,7 +228,7 @@ class Nav2Intermediary(Node):
 			# create a new path message which is a full loop starting from the closest point on the raceline to the car
 			sliced_raceline_msg = Path()
 			sliced_raceline_msg.header.frame_id = 'map'
-			sliced_raceline_msg.poses = self.raceline.poses[closest_index:] + self.raceline.poses[:closest_index]
+			sliced_raceline_msg.poses = self.raceline.poses[closest_index:] #+ self.raceline.poses[:closest_index]
 
 			# create a follow path goal
 			goal = FollowPath.Goal()
@@ -354,6 +355,7 @@ class Nav2Intermediary(Node):
 				xy[:, 0] = 2.0 * center_x - xy[:, 0] # mirror across x
 				xy[:, 1] = 2.0 * center_y - xy[:, 1] # mirror across y
 				psi += np.pi # add 180 degrees to the orientation to keep in line with the track
+				psi -= np.pi / 2 #
 
 				for i in range(len(xy)):
 					pose = PoseStamped()
@@ -389,6 +391,14 @@ class Nav2Intermediary(Node):
 		while True:
 			self.raceline.header.stamp = self.get_clock().now().to_msg()
 			self.raceline_publisher.publish(self.raceline)
+
+			# also publish a pose array
+			pose_array_msg = PoseArray()
+			pose_array_msg.header.frame_id = 'map'
+			pose_array_msg.header.stamp = self.get_clock().now().to_msg()
+			pose_array_msg.poses = [pose.pose for pose in self.raceline.poses]
+			self.pose_array_publisher.publish(pose_array_msg)
+
 			sleep(0.1)
 
 def main(args=None):
