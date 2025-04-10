@@ -236,7 +236,8 @@ class Nav2Intermediary(Node):
 			distances = np.linalg.norm(poses - car_pose, axis=1)
 			closest_index = np.argmin(distances)
 
-			# get the next goal pose as 25% of the way around the current lap
+			# get the next goal pose as 25% of the way around the current lap.
+			# TODO: Fix this so that it goes 25% forward instead of backwards.
 			reindexed_poses = self.raceline.poses[closest_index:] + self.raceline.poses[:closest_index]
 			next_goal_pose = reindexed_poses[int(0.25*len(reindexed_poses))]
 
