@@ -29,6 +29,8 @@ from time import sleep
 import csv
 import os
 import time
+import subprocess
+
 """
 Because we are using a PixHawk FCU to send signals to the ESC, we must go through initialization steps to arm the motors.
 When initialized, this class goes through these steps.
@@ -38,6 +40,8 @@ This code is a modified version of the ROS2Control class from the OpenConvoy pap
 EXPLORATION = 0
 COMPUTING_RACELINE = 1
 RACELINE = 2
+
+LOG_EXPERIMENTS = True
 
 OPTIMIZER_PATH = 'global_racetrajectory_optimization'
 DEBUG_KEY = str(time.time())
@@ -170,10 +174,11 @@ class Nav2Intermediary(Node):
 		self.gap_follow_subscriber = self.create_subscription(AckermannDriveStamped, '/wall_follower/cmd_vel', self.gap_follow_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		self.updated_raceline_publisher = self.create_timer(1.0, self.publish_updated_raceline)
 		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
-		self.follow_path_client = ActionClient(self, FollowPath, 'follow_path')
-		self.get_logger().info("Waiting for FollowPath action server...")
-		self.follow_path_client.wait_for_server()
-		self.get_logger().info("FollowPath action server is up!")
+		self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 20)
+		# self.follow_path_client = ActionClient(self, FollowPath, 'follow_path')
+		# self.get_logger().info("Waiting for FollowPath action server...")
+		# self.follow_path_client.wait_for_server()
+		# self.get_logger().info("FollowPath action server is up!")
 		
 		# topics on which we receive data to store at a class level for use by other processes within this node
 		self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
@@ -189,6 +194,12 @@ class Nav2Intermediary(Node):
 		self.raceline_publisher = self.create_publisher(Path, '/raceline', 20)
 		self.raceline_publisher_thread = threading.Thread(target=self.publish_raceline)
 		self.pose_array_publisher = self.create_publisher(PoseArray, '/raceline_poses', 20)
+
+		# set up logging for experiments
+		if LOG_EXPERIMENTS:
+			self.set_up_csvs()
+			self.last_pose_publish_time = None
+			self.plan_subscriber = self.create_subscription(Path, '/plan', self.plan_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		
 	# VVV Car control functions VVV
 
@@ -225,18 +236,31 @@ class Nav2Intermediary(Node):
 			distances = np.linalg.norm(poses - car_pose, axis=1)
 			closest_index = np.argmin(distances)
 
-			# create a new path message which is a full loop starting from the closest point on the raceline to the car
-			sliced_raceline_msg = Path()
-			sliced_raceline_msg.header.frame_id = 'map'
-			sliced_raceline_msg.poses = self.raceline.poses[closest_index:] #+ self.raceline.poses[:closest_index]
+			# get the next goal pose as 25% of the way around the current lap
+			reindexed_poses = self.raceline.poses[closest_index:] + self.raceline.poses[:closest_index]
+			next_goal_pose = reindexed_poses[int(0.25*len(reindexed_poses))]
 
-			# create a follow path goal
-			goal = FollowPath.Goal()
-			goal.path = sliced_raceline_msg
-			goal.controller_id = 'FollowPath'
+			# publish the next goal pose
+			goal_pose_msg = PoseStamped()
+			goal_pose_msg.header.frame_id = 'map'
+			goal_pose_msg.pose = next_goal_pose.pose
+			self.goal_pose_publisher.publish(goal_pose_msg)
 
-			# send the goal to the action server, and don't wait for a result
-			self.follow_path_client.send_goal_async(goal)
+			# # create a new path message which is a full loop starting from the closest point on the raceline to the car
+			# sliced_raceline_msg = Path()
+			# sliced_raceline_msg.header.frame_id = 'map'
+			# sliced_raceline_msg.poses = self.raceline.poses[closest_index:] #+ self.raceline.poses[:closest_index]
+
+			# # create a follow path goal
+			# goal = FollowPath.Goal()
+			# goal.path = sliced_raceline_msg
+			# goal.controller_id = 'FollowPath'
+
+			# # send the goal to the action server, and don't wait for a result
+			# self.follow_path_client.send_goal_async(goal)
+
+			if LOG_EXPERIMENTS:
+				self.last_pose_publish_time = time.time()
 
 	# VVV Sensor callback functions VVV
 
@@ -306,12 +330,30 @@ class Nav2Intermediary(Node):
 		self.get_logger().info("Track data written to csv. Running optimization.")
 
 		# run the optimization
+		cmd = [
+			"python3",
+			f"{OPTIMIZER_PATH}/main_globaltraj.py",
+			"--x",
+			str(-1 * self.map.info.origin.position.x),
+			"--y",
+			str(-1 * self.map.info.origin.position.y)
+		]
+
+		result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
 		os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py --x {-1*self.map.info.origin.position.x} --y {-1*self.map.info.origin.position.y}')
 		sleep(5)
 
-		# read the output file
-		if os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
-			self.get_logger().info("Raceline file found.")
+		# Should be `result.stderr == ""` in the humble distro since we can reset slam there. Here, we're just gonna load an old track if this fails
+		if result.stderr == "":  #os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
+			self.get_logger().info("Raceline file computation successful.")
+
+			if LOG_EXPERIMENTS: # log the raceline computation duration
+				experiment_data_dir = "src/Senior-Design-Software/experiment_data"
+				with open(os.path.join(experiment_data_dir, 'raceline_times.csv'), 'a', newline='') as csvfile:
+					writer = csv.writer(csvfile)
+					raceline_computation_duration = result.stdout.split("Runtime from import to final trajectory was ")[1].split("\n")[0]
+					writer.writerow([raceline_computation_duration])
 
 			raceline = Path()
 			raceline.header.frame_id = 'map'
@@ -357,6 +399,11 @@ class Nav2Intermediary(Node):
 				psi += np.pi # add 180 degrees to the orientation to keep in line with the track
 				psi -= np.pi / 2 #
 
+				### DEBUGGING CODE ### this will allos us to skip straight to raceline for testing if we get a good one
+				np.save(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/raceline_xy.npy', xy)
+				np.save(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/raceline_psi.npy', psi)
+				### DEBUGGING CODE ###
+
 				for i in range(len(xy)):
 					pose = PoseStamped()
 					pose.header.frame_id = 'map'
@@ -375,6 +422,45 @@ class Nav2Intermediary(Node):
 			self.get_logger().info("EXITING PROGRAM")
 			self.destroy_node()
 			self.shutdown_flag = True
+
+	# VVV Experiment logging functions (only ever used if LOG_EXPERIMENTS is True) VVV
+	def set_up_csvs(self):
+		"""Creates the CSV files for logging experiment data"""
+
+		experiment_data_dir = "src/Senior-Design-Software/experiment_data"
+		replanning_times_dir = os.path.join(experiment_data_dir, "replanning_times")
+
+		if not os.path.exists(replanning_times_dir):
+			os.makedirs(replanning_times_dir)
+
+		# create the csv for logging replanning times for this trial
+		with open(os.path.join(replanning_times_dir, f"{DEBUG_KEY}_replanning_times.csv"), 'w', newline='') as csvfile:
+			writer = csv.writer(csvfile)
+			writer.writerow(['pose_publish_time', 'plan_receive_time', 'time_difference_seconds'])
+
+		# check if the global raceline time csv exists, and create it if it doesn't
+		if not os.path.exists(os.path.join(experiment_data_dir, 'raceline_times.csv')):
+			with open(os.path.join(experiment_data_dir, 'raceline_times.csv'), 'w', newline='') as csvfile:
+				writer = csv.writer(csvfile)
+				writer.writerow(['raceline_computation_duration_seconds'])
+
+	def plan_callback(self, msg: Path):
+		"""Logs the time it takes to receive a plan from the /plan topic."""
+
+		experiment_data_dir = "src/Senior-Design-Software/experiment_data"
+		replanning_times_dir = os.path.join(experiment_data_dir, "replanning_times")
+
+		if self.last_pose_publish_time is not None:
+			current_time = time.time()
+			time_difference = current_time - self.last_pose_publish_time
+			
+			# Write to CSV
+			with open(os.path.join(replanning_times_dir, f"{DEBUG_KEY}_replanning_times.csv"), 'a', newline='') as csvfile:
+				writer = csv.writer(csvfile)
+				writer.writerow([self.last_pose_publish_time, current_time, time_difference])
+			
+			self.get_logger().info(f"Plan received after {time_difference:.4f} seconds")
+			self.last_pose_publish_time = None
 
 	# VVV Misc functions VVV
 
