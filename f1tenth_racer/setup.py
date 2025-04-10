@@ -43,7 +43,8 @@ setup(
             'nav2_intermediary = f1tenth_racer.nav2_intermediary:main',
             'pose_broadcaster = f1tenth_racer.pose_broadcaster:main',
             'pose_broadcaster_2 = f1tenth_racer.pose_broadcaster_2:main',
-            'wall_follower = f1tenth_racer.wall_follower:main'
+            'wall_follower = f1tenth_racer.wall_follower:main',
+            'data_api_node = f1tenth_racer.data_api_node:main'
         ],
     },
 )

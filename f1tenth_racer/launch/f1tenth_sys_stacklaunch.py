@@ -155,6 +155,14 @@ def generate_launch_description():
         output='screen'
     )
 
+    # api node for the indicator board
+    indicator_board_api_node = Node(
+        package='f1tenth_racer',
+        executable='data_api_node',
+        name='indicator_board_api_node',
+        output='screen'
+    )
+
     # nav2
     nav2_node = ExecuteProcess(
         cmd=['ros2', 'launch', 'nav2_bringup', 'navigation_launch.py', 'params_file:=' + format_share_path('config/nav2_params.yaml')],
@@ -208,7 +216,7 @@ def generate_launch_description():
     ld.add_action(RegisterEventHandler(
             OnProcessExit(
                 target_action=odom_checker, # wait for fcu port to be open
-                on_exit=[nav2_intermediary_node, nav2_node, wall_following_node] #nav2_node # start mavros and start listening for odom
+                on_exit=[nav2_intermediary_node, nav2_node, wall_following_node, indicator_board_api_node] #nav2_node # start mavros and start listening for odom
             )
         ))
 
