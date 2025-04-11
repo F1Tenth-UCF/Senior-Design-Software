@@ -12,7 +12,7 @@ import time
 import os
 import uuid
 
-SPEED_TO_ERPM_GAIN = 4614.0
+SPEED_TO_ERPM_GAIN = 4000.0
 SPEED_TO_ERPM_OFFSET = 0.0
 
 DEBUG_KEY = str(uuid.uuid4())
@@ -42,8 +42,10 @@ class TwistToAckermannNode(Node):
         )
 
         # create the log file
+        if not os.path.exists('src/Senior-Design-Software/experiment_data/accel_times_closed'):
+            os.makedirs('src/Senior-Design-Software/experiment_data/accel_times_closed')
         debug_key = str(uuid.uuid4())
-        self.log_path = f'/home/cavrel/f1tenth_ws/src/Senior-Design-Software/experiment_data/accel_times_closed/{debug_key}.csv'
+        self.log_path = f'src/Senior-Design-Software/experiment_data/accel_times_closed/{debug_key}.csv'
 
         if not os.path.exists(self.log_path):
             with open(self.log_path, 'w') as f:

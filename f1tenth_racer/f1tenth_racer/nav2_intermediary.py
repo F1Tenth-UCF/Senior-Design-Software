@@ -31,6 +31,7 @@ import csv
 import os
 import time
 import subprocess
+import sys
 
 """
 Because we are using a PixHawk FCU to send signals to the ESC, we must go through initialization steps to arm the motors.
@@ -43,6 +44,7 @@ COMPUTING_RACELINE = 1
 RACELINE = 2
 
 LOG_EXPERIMENTS = True
+DYNAMIC_OBSTACLE_AVOIDANCE = False
 
 OPTIMIZER_PATH = 'global_racetrajectory_optimization'
 DEBUG_KEY = str(time.time())
@@ -72,7 +74,6 @@ def plot_graph(G, title):
     plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
     plt.close()
 
-# TODO: fix issue where graph created by sknw is has no cycles. doesn't happen much anymore since i modified the slam params to filter out far away lidar points.
 def preprocess_track(map: OccupancyGrid):
 	"""Converts the occupancy grid into a centerline and track width data."""
 
@@ -235,10 +236,10 @@ class Nav2Intermediary(Node):
 		self.updated_raceline_publisher = self.create_timer(1.0, self.publish_updated_raceline)
 		self.vel_publisher = self.create_publisher(AckermannDriveStamped, '/drive', 20)
 		self.goal_pose_publisher = self.create_publisher(PoseStamped, '/goal_pose', 20)
-		# self.follow_path_client = ActionClient(self, FollowPath, 'follow_path')
-		# self.get_logger().info("Waiting for FollowPath action server...")
-		# self.follow_path_client.wait_for_server()
-		# self.get_logger().info("FollowPath action server is up!")
+		self.follow_path_client = ActionClient(self, FollowPath, 'follow_path')
+		self.get_logger().info("Waiting for FollowPath action server...")
+		self.follow_path_client.wait_for_server()
+		self.get_logger().info("FollowPath action server is up!")
 		
 		# topics on which we receive data to store at a class level for use by other processes within this node
 		self.map_subscriber = self.create_subscription(OccupancyGrid, '/map', self.map_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
@@ -308,28 +309,39 @@ class Nav2Intermediary(Node):
 
 			self.get_logger().info(f"RACELINE PERCENTAGE: {closest_index/len(self.raceline.poses)}")
 
-			# get the next goal pose as 25% of the way around the current lap.
-			next_pose_index = (closest_index + int(0.1*len(self.raceline.poses))) % len(self.raceline.poses)
-			next_goal_pose = self.raceline.poses[next_pose_index]
+			if not DYNAMIC_OBSTACLE_AVOIDANCE:
+				# We follow the raceline exactly using pure pursuit. This will not avoid obstacles, but can be faster since there are no safety checks.
 
-			# publish the next goal pose
-			goal_pose_msg = PoseStamped()
-			goal_pose_msg.header.frame_id = 'map'
-			goal_pose_msg.pose = next_goal_pose.pose
-			self.goal_pose_publisher.publish(goal_pose_msg)
+				path_start_index = closest_index
+				path_end_index = (closest_index + int(0.1*len(self.raceline.poses)))
 
-			# # create a new path message which is a full loop starting from the closest point on the raceline to the car
-			# sliced_raceline_msg = Path()
-			# sliced_raceline_msg.header.frame_id = 'map'
-			# sliced_raceline_msg.poses = self.raceline.poses[closest_index:] #+ self.raceline.poses[:closest_index]
+				if path_end_index > len(self.raceline.poses):
+					path = self.raceline.poses[path_start_index:] + self.raceline.poses[:path_end_index]
+				else:
+					path = self.raceline.poses[path_start_index:path_end_index]
 
-			# # create a follow path goal
-			# goal = FollowPath.Goal()
-			# goal.path = sliced_raceline_msg
-			# goal.controller_id = 'FollowPath'
+				path_msg = Path()
+				path_msg.header.frame_id = 'map'
+				path_msg.poses = path
 
-			# # send the goal to the action server, and don't wait for a result
-			# self.follow_path_client.send_goal_async(goal)
+				goal = FollowPath.Goal()
+				goal.path = path_msg
+				goal.controller_id = 'FollowPath'
+
+				self.follow_path_client.send_goal_async(goal)
+
+			else:
+				# We follow the raceline using an A* planner which creates local plans towards the next waypoint on the raceline. Can be slower since NAV2 has additional safety checks.
+
+				# get the next goal pose as 25% of the way around the current lap.
+				next_pose_index = (closest_index + int(0.1*len(self.raceline.poses))) % len(self.raceline.poses)
+				next_goal_pose = self.raceline.poses[next_pose_index]
+
+				# publish the next goal pose
+				goal_pose_msg = PoseStamped()
+				goal_pose_msg.header.frame_id = 'map'
+				goal_pose_msg.pose = next_goal_pose.pose
+				self.goal_pose_publisher.publish(goal_pose_msg)
 
 			if LOG_EXPERIMENTS:
 				self.last_pose_publish_time = time.time()
@@ -463,13 +475,13 @@ class Nav2Intermediary(Node):
 
 		result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-		os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py --x {-1*self.map.info.origin.position.x} --y {-1*self.map.info.origin.position.y}')
-		sleep(5)
+		# os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py --x {-1*self.map.info.origin.position.x} --y {-1*self.map.info.origin.position.y}')
+		# sleep(5)
 
 		self.get_logger().info("Raceline file computation successful.")
 
 		# Should be `result.stderr == ""` in the humble distro since we can reset slam there. Here, we're just gonna load an old track if this fails
-		if result.stderr == "":  #os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
+		if os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
 
 			if LOG_EXPERIMENTS: # log the raceline computation duration
 				experiment_data_dir = "src/Senior-Design-Software/experiment_data"
@@ -556,7 +568,11 @@ class Nav2Intermediary(Node):
 			self.raceline_publisher_thread.start() # used for visualization
 			self.state = RACELINE
 		else:
-			self.raceline_loading_thread.start() # load the old raceline
+			# self.get_logger().info("Raceline file computation failed. Loading old raceline.")
+			self.get_logger().info("Shutting down the node due to raceline computation failure.")
+			rclpy.shutdown()
+			sys.exit(1)  # Exit with error code
+			# self.raceline_loading_thread.start() # load the old raceline
 
 	# VVV Experiment logging functions (only ever used if LOG_EXPERIMENTS is True) VVV
 	def set_up_csvs(self):

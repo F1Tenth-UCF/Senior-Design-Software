@@ -27,7 +27,7 @@ ERRORS = [
     "ESC over temp",
     "Motor over temp",
 ]
-SPEED_TO_ERPM_GAIN = 4614.0
+SPEED_TO_ERPM_GAIN = 4000.0
 SPEED_TO_ERPM_OFFSET = 0.0
 
 def get_cpu_temp():

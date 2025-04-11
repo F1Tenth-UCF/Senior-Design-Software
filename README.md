@@ -79,6 +79,8 @@ Install the F1Tenth system by following the instructions [here](https://f1tenth.
 
 > Be sure to [configure the VESC](https://f1tenth.readthedocs.io/en/foxy_test/getting_started/firmware/firmware_vesc.html) and follow the `Calibrating the Odometry` tutorial before running. 
 
+> From that tutorial, the open class car has erpm gain 4000 and servo gain -1.3135.
+
 ## Setting up SLAM
 
 Install slam-toolbox. In our case, the command was
@@ -171,3 +173,6 @@ ros2 service call /slam_toolbox/save_map \
   slam_toolbox/srv/SaveMap \
   "{name: {data: '/home/cavrel/f1tenth_ws/src/Senior-Design-Software/saved_map'}}"
 ```
+
+
+> ros2 run key_teleop key_teleop --ros-args -p forward_rate:=6.5
