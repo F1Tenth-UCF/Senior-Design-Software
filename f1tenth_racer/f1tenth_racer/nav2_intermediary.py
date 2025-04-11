@@ -13,6 +13,7 @@ from nav2_msgs.action import FollowPath
 from tf2_ros import Buffer, TransformListener
 import threading
 import matplotlib.pyplot as plt
+from geometry_msgs.msg import PointStamped
 import cv2
 from scipy.ndimage import binary_closing, binary_opening, distance_transform_edt
 from scipy.spatial import cKDTree
@@ -224,7 +225,7 @@ class Nav2Intermediary(Node):
 		super().__init__('nav2_intermediary')
 
 		# class variables
-		self.state = EXPLORATION
+		self.state = COMPUTING_RACELINE #EXPLORATION
 		self.map: OccupancyGrid = None
 		self.raceline: Path = None
 
@@ -253,6 +254,7 @@ class Nav2Intermediary(Node):
 		self.raceline_publisher = self.create_publisher(Path, '/raceline', 20)
 		self.raceline_publisher_thread = threading.Thread(target=self.publish_raceline)
 		self.pose_array_publisher = self.create_publisher(PoseArray, '/raceline_poses', 20)
+		self.closest_point_publisher = self.create_publisher(PointStamped, '/closest_point', 20)
 
 		# set up logging for experiments
 		if LOG_EXPERIMENTS:
@@ -260,6 +262,9 @@ class Nav2Intermediary(Node):
 			self.last_pose_publish_time = None
 			self.plan_subscriber = self.create_subscription(Path, '/plan', self.plan_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		
+		self.raceline_loading_thread = threading.Thread(target=self.load_computed_raceline)
+		self.raceline_loading_thread.start()
+
 	# VVV Car control functions VVV
 
 	def gap_follow_callback(self, msg: AckermannDriveStamped):
@@ -295,10 +300,17 @@ class Nav2Intermediary(Node):
 			distances = np.linalg.norm(poses - car_pose, axis=1)
 			closest_index = np.argmin(distances)
 
+			closest_point_msg = PointStamped()
+			closest_point_msg.header.frame_id = 'map'
+			closest_point_msg.point.x = self.raceline.poses[closest_index].pose.position.x
+			closest_point_msg.point.y = self.raceline.poses[closest_index].pose.position.y
+			self.closest_point_publisher.publish(closest_point_msg)
+
+			self.get_logger().info(f"RACELINE PERCENTAGE: {closest_index/len(self.raceline.poses)}")
+
 			# get the next goal pose as 25% of the way around the current lap.
-			# TODO: Fix this so that it goes 25% forward instead of backwards.
-			reindexed_poses = self.raceline.poses[:closest_index] + self.raceline.poses[closest_index:]
-			next_goal_pose = reindexed_poses[int(0.1*len(reindexed_poses))]
+			next_pose_index = (closest_index + int(0.1*len(self.raceline.poses))) % len(self.raceline.poses)
+			next_goal_pose = self.raceline.poses[next_pose_index]
 
 			# publish the next goal pose
 			goal_pose_msg = PoseStamped()
@@ -375,6 +387,43 @@ class Nav2Intermediary(Node):
 				self.get_logger().info("Loop closure detected. Switching to raceline computation.")
 				self.state = COMPUTING_RACELINE
 				self.raceline_computation_thread.start()
+
+	def load_computed_raceline(self):
+		"""Loads the computed raceline from the /raceline topic. Used alternatively to the raceline computation thread."""
+
+		xy = np.load('/home/cavrel/f1tenth_ws/src/Senior-Design-Software/debug_data/1744347098.6503007/raceline_xy.npy')
+
+		raceline = Path()
+		raceline.header.frame_id = 'map'
+
+		num_points = len(xy)
+		for i in range(num_points):
+			# find the next index (wrapping around for the last point)
+			next_i = (i + 1) % num_points
+			
+			# compute direction from current to next
+			dx = xy[next_i, 0] - xy[i, 0]
+			dy = xy[next_i, 1] - xy[i, 1]
+			
+			# compute heading from that vector
+			heading = np.arctan2(dy, dx)
+
+			# make a quaternion for that heading
+			qz = np.sin(heading / 2.0)
+			qw = np.cos(heading / 2.0)
+
+			pose = PoseStamped()
+			pose.header.frame_id = 'map'
+			pose.pose.position.x = xy[i, 0]
+			pose.pose.position.y = xy[i, 1]
+			pose.pose.position.z = 0.0
+			pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
+
+			raceline.poses.append(pose)
+
+		self.raceline = raceline
+		self.raceline_publisher_thread.start()
+		self.state = RACELINE
 
 	def compute_raceline(self):
 		"""Runs in its own thread and computes the raceline, then kicks off the raceline execution stage of the race."""
@@ -453,7 +502,7 @@ class Nav2Intermediary(Node):
 				# rotate the raceline 90 degrees clockwise to align with the track
 				x = y_orig
 				y = -x_orig
-				psi = psi_orig - np.pi / 2
+				psi = psi_orig# - np.pi / 2
 				xy = np.c_[x, y]
 
 				# now calculate the centroid of the raceline
@@ -469,21 +518,36 @@ class Nav2Intermediary(Node):
 				# center_y = track_centroid[1]
 				xy[:, 0] = 2.0 * center_x - xy[:, 0] # mirror across x
 				# xy[:, 1] = 2.0 * center_y - xy[:, 1] # mirror across y
-				psi += np.pi # add 180 degrees to the orientation to keep in line with the track
-				psi -= np.pi / 2 #
+				# psi += np.pi # add 180 degrees to the orientation to keep in line with the track
+				# psi -= np.pi / 2 #
 
 				### DEBUGGING CODE ### this will allos us to skip straight to raceline for testing if we get a good one
 				np.save(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/raceline_xy.npy', xy)
 				np.save(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/raceline_psi.npy', psi)
 				### DEBUGGING CODE ###
 
-				for i in reversed(range(len(xy))):
+				num_points = len(xy)
+				for i in range(num_points):
+					# find the next index (wrapping around for the last point)
+					next_i = (i + 1) % num_points
+					
+					# compute direction from current to next
+					dx = xy[next_i, 0] - xy[i, 0]
+					dy = xy[next_i, 1] - xy[i, 1]
+					
+					# compute heading from that vector
+					heading = np.arctan2(dy, dx)
+
+					# make a quaternion for that heading
+					qz = np.sin(heading / 2.0)
+					qw = np.cos(heading / 2.0)
+
 					pose = PoseStamped()
 					pose.header.frame_id = 'map'
 					pose.pose.position.x = xy[i, 0]
 					pose.pose.position.y = xy[i, 1]
 					pose.pose.position.z = 0.0
-					pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=np.sin(psi[i]/2), w=np.cos(psi[i]/2))
+					pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=qz, w=qw)
 
 					raceline.poses.append(pose)
 
