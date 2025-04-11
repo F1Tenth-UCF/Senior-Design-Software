@@ -47,6 +47,30 @@ OPTIMIZER_PATH = 'global_racetrajectory_optimization'
 DEBUG_KEY = str(time.time())
 os.makedirs(f"src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images", exist_ok=True)
 
+def display_binary_image(image, title):
+	plt.figure(figsize=(10, 8))
+	plt.imshow(image, cmap='gray')
+	plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
+	plt.close()
+
+def plot_graph(G, title):
+    plt.figure(figsize=(10, 8))
+
+    # Plot the graph nodes
+    node_pos = {i: (G.nodes[i]['o'][1], G.nodes[i]['o'][0]) for i in G.nodes()}
+    nx.draw_networkx_nodes(G, pos=node_pos, node_size=20, node_color='red')
+
+    # Plot the graph edges
+    for (s, e) in G.edges():
+        ps = G[s][e]['pts']
+        plt.plot(ps[:, 1], ps[:, 0], 'green')
+    plt.title('Skeleton Graph Visualization')
+    plt.axis('equal')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/{title}.png')
+    plt.close()
+
 # TODO: fix issue where graph created by sknw is has no cycles. doesn't happen much anymore since i modified the slam params to filter out far away lidar points.
 def preprocess_track(map: OccupancyGrid):
 	"""Converts the occupancy grid into a centerline and track width data."""
@@ -77,13 +101,16 @@ def preprocess_track(map: OccupancyGrid):
 	track = binary_opening(binary_space, iterations=2)
 	track = binary_closing(track, iterations=2)
 
-	# display_binary_image(track, 'track')
+	display_binary_image(track, 'track')
 
 	# get a 1 pixel wide skeleton of the centerline
 	skel = skeletonize(track)
 
+	display_binary_image(skel, 'skel')
+
 	# convert that to a path graph. We also need to check for spurious edges that are not part of the track, and remove them.
 	G = sknw.build_sknw(skel)
+	plot_graph(G, 'graph')
 
 	leaf_nodes_exist = True
 	while leaf_nodes_exist: # make repeated iterations through the graph until there are either no leaf nodes or only 1 node left
@@ -98,6 +125,8 @@ def preprocess_track(map: OccupancyGrid):
 
 		for node in nodes_to_remove:
 			G.remove_node(node)
+
+	plot_graph(G, 'graph_no_spurs')
 
 	# extract the ordered points from the graph
 	path = []
@@ -157,6 +186,36 @@ def preprocess_track(map: OccupancyGrid):
 
 	centroid_meters = np.array([centroid.y, centroid.x])*map_resolution + np.array([map.info.origin.position.x, map.info.origin.position.y])
 
+	### DEBUGGING CODE ###
+	plt.figure(figsize=(10, 8))
+	plt.plot(centerline[:, 0], centerline[:, 1], 'b-', linewidth=2, label='Centerline')
+	plt.scatter(xy[:, 0], xy[:, 1], c='r', s=10, alpha=0.5, label='Original Points')
+	plt.title('Track Centerline')
+	plt.xlabel('X (meters)')
+	plt.ylabel('Y (meters)')
+	plt.legend()
+	plt.axis('equal')
+	plt.grid(True)
+
+	for i in range(len(centerline[:-1])):
+		_range = centerline[i:i+2]
+
+		p1x, p1y = _range[0]
+		p2x, p2y = _range[1]
+
+		right_vector = np.array((p2y - p1y, p1x - p2x))
+		left_vector = np.array((p1y - p2y, p2x - p1x))
+
+		right_vector = (right_vector / np.linalg.norm(right_vector)) * right_width[i]
+		left_vector = (left_vector / np.linalg.norm(left_vector)) * left_width[i]
+
+		plt.arrow(p1x, p1y, right_vector[0], right_vector[1], head_width=0.1, head_length=0.1, color='red')
+		plt.arrow(p1x, p1y, left_vector[0], left_vector[1], head_width=0.1, head_length=0.1, color='blue')
+
+	plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/centerline_debug.png')
+	plt.close()
+	### DEBUGGING CODE ###
+	
 	return centerline, right_width, left_width, centroid_meters
 
 class Nav2Intermediary(Node):
@@ -238,8 +297,8 @@ class Nav2Intermediary(Node):
 
 			# get the next goal pose as 25% of the way around the current lap.
 			# TODO: Fix this so that it goes 25% forward instead of backwards.
-			reindexed_poses = self.raceline.poses[closest_index:] + self.raceline.poses[:closest_index]
-			next_goal_pose = reindexed_poses[int(0.25*len(reindexed_poses))]
+			reindexed_poses = self.raceline.poses[:closest_index] + self.raceline.poses[closest_index:]
+			next_goal_pose = reindexed_poses[int(0.1*len(reindexed_poses))]
 
 			# publish the next goal pose
 			goal_pose_msg = PoseStamped()
@@ -282,6 +341,19 @@ class Nav2Intermediary(Node):
 			marker_array = np.zeros((len(msg.markers), 2))
 			for marker in msg.markers:
 				marker_array[marker.id-1, :] = [marker.pose.position.x, marker.pose.position.y]
+
+			### DEBUGGING CODE ###
+			plt.figure(figsize=(10, 10))
+			# Create a colormap that shows the order of markers (from blue to red)
+			colors = plt.cm.viridis(np.linspace(0, 1, len(marker_array)))
+			plt.scatter(marker_array[:, 0], marker_array[:, 1], s=10, c=colors)
+			plt.colorbar(label='Marker Order')
+			plt.title(f'Pose Graph Markers - {len(marker_array)} points')
+			plt.xlabel('X Position (m)')
+			plt.ylabel('Y Position (m)')
+			plt.savefig(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/pose_graph_images/marker_array_{self.get_clock().now().to_msg().sec}.png')
+			plt.close()
+			### DEBUGGING CODE ###
 
 			tree = cKDTree(marker_array)
 
@@ -394,9 +466,9 @@ class Nav2Intermediary(Node):
 
 				# throw in some more flips for good measure
 				center_x = track_centroid[0]
-				center_y = track_centroid[1]
+				# center_y = track_centroid[1]
 				xy[:, 0] = 2.0 * center_x - xy[:, 0] # mirror across x
-				xy[:, 1] = 2.0 * center_y - xy[:, 1] # mirror across y
+				# xy[:, 1] = 2.0 * center_y - xy[:, 1] # mirror across y
 				psi += np.pi # add 180 degrees to the orientation to keep in line with the track
 				psi -= np.pi / 2 #
 
@@ -405,7 +477,7 @@ class Nav2Intermediary(Node):
 				np.save(f'src/Senior-Design-Software/debug_data/{DEBUG_KEY}/raceline_psi.npy', psi)
 				### DEBUGGING CODE ###
 
-				for i in range(len(xy)):
+				for i in reversed(range(len(xy))):
 					pose = PoseStamped()
 					pose.header.frame_id = 'map'
 					pose.pose.position.x = xy[i, 0]

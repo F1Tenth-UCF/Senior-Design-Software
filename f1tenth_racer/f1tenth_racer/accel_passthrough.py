@@ -37,7 +37,7 @@ class TwistToAckermannNode(Node):
         # Create publisher for /teleop topic
         self.publisher = self.create_publisher(
             AckermannDriveStamped,
-            '/teleop',
+            '/drive',
             10
         )
 
@@ -63,7 +63,7 @@ class TwistToAckermannNode(Node):
             writer = csv.writer(f)
             writer.writerow([time.time(), speed])
 
-            if speed >= 6.49:
+            if speed >= 3.0: #6.49:
                 self.get_logger().info('Target speed reached! Shutting down...')
                 # Close the file properly
                 f.close()
@@ -88,7 +88,9 @@ class TwistToAckermannNode(Node):
         
         # Convert linear.x to speed and angular.z to steering angle
         ackermann_msg.drive.speed = msg.linear.x
-        ackermann_msg.drive.steering_angle = msg.angular.z
+        ackermann_msg.drive.steering_angle = 0.05 #msg.angular.z
+
+        self.get_logger().info(f"Publishing x 0 and steer -2")
         
         # Publish the converted message
         self.publisher.publish(ackermann_msg)

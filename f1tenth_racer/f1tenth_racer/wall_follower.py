@@ -401,7 +401,7 @@ class FollowTheGapNode(Node):
             # Publish result
             drive_msg = AckermannDriveStamped()
             drive_msg.drive.speed = 0.35  # fixed speed
-            drive_msg.drive.steering_angle = final_heading_angle
+            drive_msg.drive.steering_angle = final_heading_angle + 0.05
 
             self.drive_pub.publish(drive_msg)
             # self.get_logger().info(f"Publishing steering={final_heading_angle:.3f}, speed=0.35")
