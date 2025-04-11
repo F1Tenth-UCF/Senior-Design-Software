@@ -225,7 +225,7 @@ class Nav2Intermediary(Node):
 		super().__init__('nav2_intermediary')
 
 		# class variables
-		self.state = COMPUTING_RACELINE #EXPLORATION
+		self.state = EXPLORATION
 		self.map: OccupancyGrid = None
 		self.raceline: Path = None
 
@@ -263,7 +263,7 @@ class Nav2Intermediary(Node):
 			self.plan_subscriber = self.create_subscription(Path, '/plan', self.plan_callback, QoSPresetProfiles.SYSTEM_DEFAULT.value, callback_group=MutuallyExclusiveCallbackGroup())
 		
 		self.raceline_loading_thread = threading.Thread(target=self.load_computed_raceline)
-		self.raceline_loading_thread.start()
+		# self.raceline_loading_thread.start()
 
 	# VVV Car control functions VVV
 
@@ -466,9 +466,10 @@ class Nav2Intermediary(Node):
 		os.system(f'python3 {OPTIMIZER_PATH}/main_globaltraj.py --x {-1*self.map.info.origin.position.x} --y {-1*self.map.info.origin.position.y}')
 		sleep(5)
 
+		self.get_logger().info("Raceline file computation successful.")
+
 		# Should be `result.stderr == ""` in the humble distro since we can reset slam there. Here, we're just gonna load an old track if this fails
 		if result.stderr == "":  #os.path.exists(f'{OPTIMIZER_PATH}/outputs/traj_race_cl.csv'):
-			self.get_logger().info("Raceline file computation successful.")
 
 			if LOG_EXPERIMENTS: # log the raceline computation duration
 				experiment_data_dir = "src/Senior-Design-Software/experiment_data"
@@ -555,10 +556,7 @@ class Nav2Intermediary(Node):
 			self.raceline_publisher_thread.start() # used for visualization
 			self.state = RACELINE
 		else:
-			self.get_logger().error("Raceline file not found.")
-			self.get_logger().info("EXITING PROGRAM")
-			self.destroy_node()
-			self.shutdown_flag = True
+			self.raceline_loading_thread.start() # load the old raceline
 
 	# VVV Experiment logging functions (only ever used if LOG_EXPERIMENTS is True) VVV
 	def set_up_csvs(self):
