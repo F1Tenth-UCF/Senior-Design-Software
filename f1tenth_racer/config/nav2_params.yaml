@@ -134,8 +134,8 @@ planner_server:
       plugin: "smac_planner/SmacPlanner"
       downsample_costmap: true #false
       downsampling_factor: 2 #1
-      tolerance: 0.25
-      allow_unknown: true
+      tolerance: 0.5
+      allow_unknown: false
       max_iterations: 10000 #1000000
       max_on_approach_iterations: 1000
       max_planning_time: 5.0
@@ -145,7 +145,7 @@ planner_server:
       analytic_expansion_max_length: 3.0
       analytic_expansion_max_cost: 200.0
       analytic_expansion_max_cost_override: false
-      minimum_turning_radius: 0.40
+      minimum_turning_radius: 0.80
       reverse_penalty: 2.0
       change_penalty: 0.0
       non_straight_penalty: 1.2
@@ -194,9 +194,10 @@ controller_server:
       stateful: True
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.4
+      desired_linear_vel: 1.0
       max_linear_accel: 10.0
       max_linear_decel: 10.0
+      max_allowed_time_to_collision: 0.1
       lookahead_dist: 0.5 # look ahead 0.5 meters along the path
       transform_tolerance: 0.1 # not sure what this does
       use_velocity_scaled_lookahead_dist: False
@@ -204,8 +205,8 @@ controller_server:
       use_cost_regulated_linear_velocity_scaling: False
       use_rotate_to_heading: False
       # below this ensures that we slow down for turns
-      use_regulated_linear_velocity_scaling: True # changes the velocity based on the curvature of the path
-      regulated_linear_scaling_min_speed: 0.3 # minimum speed to maintain
+      use_regulated_linear_velocity_scaling: False # changes the velocity based on the curvature of the path
+      regulated_linear_scaling_min_speed: 0.5 # minimum speed to maintain
       regulated_linear_scaling_min_radius: 0.8 # turning radius is 0.635, so we go a bit above that
 
 collision_monitor:
