@@ -151,28 +151,11 @@ Run the commands in `shell_setup.sh` to set up the shell, then run the command b
 
 ```bash
 ros2 launch f1tenth_racer f1tenth_sys_stacklaunch.py
-ros2 run f1tenth_racer wall_follower
 ```
 
 > Note: If difficulties are encountered, try running `ros2 daemon stop` followed by `ros2 daemon start` to restart the ROS 2 daemon, while the script is not running.
 
 > Note: The environment variables are set to enable remote communication between ROS 2 Foxy on the car and a different ROS 2 distro (e.g. Humble) running on a different Ubuntu machine on the same network. This is crucial if you want to visualize the car's topics in Rviz on a different machine while it is driving.
-
-<!-- > Note: One of the commands in this launch file uses sudo to open the FCU serial port. You may need to enter the car's password to continue. However, it is likely that the prompt to do so will be buried under the other output. If it seems to hang, try entering the password and pressing enter again. -->
-
-> Note: You can run the following command to serialize the pose graph:
-
-```
-ros2 service call /slam_toolbox/serialize_map \
-  slam_toolbox/srv/SerializePoseGraph \
-  "{filename: '/home/cavrel/f1tenth_ws/src/Senior-Design-Software/saved_graph.posegraph'}"
-```
-
-```
-ros2 service call /slam_toolbox/save_map \
-  slam_toolbox/srv/SaveMap \
-  "{name: {data: '/home/cavrel/f1tenth_ws/src/Senior-Design-Software/saved_map'}}"
-```
 
 
 > ros2 run key_teleop key_teleop --ros-args -p forward_rate:=6.5
