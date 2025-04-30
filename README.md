@@ -1,4 +1,4 @@
-# Senior Design F1Tenth Gazebo Simulator
+# Senior Design F1Tenth Physical Car Code
 
 This branch contains the code for the physical F1Tenth race vehicle.
 
